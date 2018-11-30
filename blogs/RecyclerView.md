@@ -303,9 +303,150 @@ DefaultItemAnimator 是继承至 SimpleItemAnimator 类，而 SimpleItemAnimator
         public abstract boolean isRunning();
 ```
 
+但是即使这样，需要实现的方法还是一大堆，并且还的自己去写动画的添加、回收等等。所以我建议直接看 [**recyclerview-animators**](https://github.com/wasabeef/recyclerview-animators) 中的 BaseItemAnimator，然后继承它只需要重写动画逻辑就好了，不必在考虑繁琐的动画添加、回收等工作。
+
 ##### ItemTouchHelper
 
+ItemTouchHelper 能用来实现 RecyclerView Item 的上下拖拽以及滑动删除功能，实现起来可以说是究极简单。
+
+分为两步：
+
+1. 实现 ItemTouchHelper.Callback 回调
+2. 把 ItemTouchHelper 绑定到 RecyclerView 上
+
+第一步，多说无益：
+
+```java
+public class DefaultItemTouchHelper<T> extends ItemTouchHelper.Callback {
+
+    private BaseRvAdapterWrapper mBaseRvAdapterWrapper;
+    private List<T> mList;
+
+    public DefaultItemTouchHelper(BaseRvAdapterWrapper baseRvAdapterWrapper, List<T> list) {
+        mBaseRvAdapterWrapper = baseRvAdapterWrapper;
+        mList = list;
+    }
+
+    /**
+     * 设置支持滑动、拖拽的方向
+     */
+    @Override
+    public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+        int dragFlag = ItemTouchHelper.UP | ItemTouchHelper.DOWN;   //上下拖拽
+        int swipeFlag = ItemTouchHelper.START | ItemTouchHelper.END;    //左右滑动
+        return makeMovementFlags(dragFlag, swipeFlag);
+    }
+
+    /**
+     * 拖拽时回调
+     */
+    @Override
+    public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder viewHolder1) {
+        int form = viewHolder.getAdapterPosition();
+        int to = viewHolder1.getAdapterPosition();
+        Collections.swap(mList, form, to);
+        mBaseRvAdapterWrapper.notifyItemMoved(form, to);
+        return true;
+    }
+
+    /**
+     * 滑动时回调
+     */
+    @Override
+    public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int i) {
+        int position = viewHolder.getAdapterPosition();
+        mList.remove(position);
+        mBaseRvAdapterWrapper.notifyItemRemoved(position);
+    }
+
+    /**
+     * 状态改变时回调
+     */
+    @Override
+    public void onSelectedChanged(@Nullable RecyclerView.ViewHolder viewHolder, int actionState) {
+        super.onSelectedChanged(viewHolder, actionState);
+        if (actionState != ItemTouchHelper.ACTION_STATE_IDLE) {
+            viewHolder.itemView.setBackgroundColor(Color.parseColor("#ffffff")); //设置拖拽和侧滑时的背景色
+        }
+    }
+
+    /**
+     * 拖拽或滑动完成之后回调
+     */
+    @Override
+    public void clearView(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+        super.clearView(recyclerView, viewHolder);
+        viewHolder.itemView.setBackgroundColor(Color.parseColor("#FFFFFF"));
+    }
+    
+    /**
+     * 如果想自定义动画，可以重写这个方法
+     * 根据偏移量来设置
+     */
+    @Override
+    public void onChildDraw(@NonNull Canvas c, @NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
+        super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
+    }
+}
+```
+
+第二步：
+
+```java
+ItemTouchHelper itemTouchHelper = new ItemTouchHelper(new DefaultItemTouchHelper<>(mBaseRvAdapterWrapper, mData));
+itemTouchHelper.attachToRecyclerView(mRecyclerView);
+```
+
+OK，完事。
+
 ##### 结合 SnapHelper
+
+SnapHelp 能够辅助 RecyclerView 在滚动结束时将 Item 对齐到某个位置。
+
+SnapHelp 是一个抽象类，Android 提供了 LinearSnapHelper，可以让 RecyclerView 滚动停止时 Item 停留在中间位置，又提供了 PagerSnapHelper，可以让 RecyclerView 像 ViewPager 一样的效果，一次只能滑动一个，并且 Item 居中显示，和 LinearSnapHelper 的区别在于 LinearSnapHelper 支持惯性滑动，所以一次能滑动多个。
+
+使用起来极其简单：
+
+```java
+LinearSnapHelper linearSnapHelper = new LinearSnapHelper();
+linearSnapHelper.attachToRecyclerView(mRecyclerView);
+
+PagerSnapHelper pagerSnapHelper = new PagerSnapHelper();
+pagerSnapHelper.attachToRecyclerView(mRecyclerView);
+```
+
+在分析 SnapHelper 原理之前，先来了解一下 Fling 概念。Fling 操作从手指离开屏幕瞬间被触发，在停止滚动时结束，即惯性滑动。
+
+SnapHelpr 是一个抽象类，它有三个抽象方法：
+
+```java
+    @Override
+    public int findTargetSnapPosition(RecyclerView.LayoutManager layoutManager, int i, int i1) {
+        return 0;
+    }
+
+    @Nullable
+    @Override
+    public View findSnapView(RecyclerView.LayoutManager layoutManager) {
+        return null;
+    }
+
+    @Nullable
+    @Override
+    public int[] calculateDistanceToFinalSnap(@NonNull RecyclerView.LayoutManager layoutManager, @NonNull View view) {
+        return new int[0];
+    }
+```
+
+findTargetSnapPosition 方法会根据触发 Fling 操作的速率来找到 RecyclerView 需要滚动到哪个位置，该位置对应的 ItemView 就是那个需要对齐的列表项。我们把这个位置称为 targetSnapPosition，对应的 View 称为 targetSnapView，如果找不到 targetSnapPosition，就返回 RecyclerView.NO_POSITION。
+
+findSnapView 方法会找到当前 LayoutManager 最接近对齐位置的那个 ItemView，该 View 称为 SnapView，对应的 position 称为 SnapPosition。如果返回 null，则表示没有要对齐的 View，也就不会做对齐调整。
+
+calculateDistanceToFinalSnap 方法会计算需要对齐的 ItemView 与目标 View 之间的距离，返回一个大小为二的 int 数组，分别对应 x 轴和 y 轴方向上的距离。
+
+![](https://github.com/Omooo/Android-Notes/blob/master/images/SnapView.png)
+
+
 
 ##### 万能 Adapter
 
@@ -491,8 +632,75 @@ ArrayList<ViewHolder> mRemoveAnimations = new ArrayList();
 
 此类不是由调用者构造的，而是通过 View.animate() 返回的对应 View 的 ViewPropertyAnimator 对象的引用。这给我们使用 AnimatorSet 又带来了一种新选择，get 。
 
-上面都是使用 mPengdingXxx，那 mAxxAnimations 有什么
+上面都是使用 mPengdingXxx，那 mXxxAnimations 有什么用呢？我们只看到它在动画执行前添加一个 ViewHolder，动画执行完毕之后又移除这个 ViewHoler。
+
+其实它的作用很简单，就是判断动画是否正在在执行：
+
+```java
+    public boolean isRunning() {
+        return !this.mPendingAdditions.isEmpty() || !this.mPendingChanges.isEmpty() || !this.mPendingMoves.isEmpty() || !this.mPendingRemovals.isEmpty() || !this.mMoveAnimations.isEmpty() || !this.mRemoveAnimations.isEmpty() || !this.mAddAnimations.isEmpty() || !this.mChangeAnimations.isEmpty() || !this.mMovesList.isEmpty() || !this.mAdditionsList.isEmpty() || !this.mChangesList.isEmpty();
+    }
+```
 
 ##### 总结：
 
-1. 
+1. 动画的执行是有优先级之分的，Remove > Move > Change > Add
+2. 我们重写的 animateXxx 等方法只是把将要执行的动画添加到执行队列（ List ）中，然后在 runPendingAnimations 一并执行
+3. 真正的动画效果是通过 ViewPropertyAnimator 来实现的，它在多个动画同时执行时表现出更好的性能
+
+##### 缓存机制
+
+RecyclerView 比 ListView 多两级缓存，支持多个离 ItemView 缓存，支持开发者自定义缓存处理逻辑。支持所有的 RecyclerView 共用同一个 RecyclerViewPool。
+
+具体来说：
+
+1.层级不同
+
+ListView 两级缓存：
+
+|              | 是否需要回调 createView | 是否需要回调 bindView | 生命周期                                                   | 备注                           |
+| ------------ | ----------------------- | --------------------- | ---------------------------------------------------------- | ------------------------------ |
+| mActiveViews | 否                      | 否                    | onLayout 函数周期内                                        | 用于屏幕内 ItemView 的快速重用 |
+| mScrapViews  | 否                      | 是                    | 与 mAdapter 一致，当 mAdapter 更改时，mScrapViews 即被清空 |                                |
+
+RecyclerView 四级缓存：
+
+|                     | 是否需要 createView | 是否需要 bindView | 生命周期                                                     | 备注                                                         |
+| ------------------- | ------------------- | ----------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| mAttachedScrap      | 否                  | 否                | onLayout 函数周期内                                          | 用于屏幕内 ItemView 的快速重用                               |
+| mCacheViews         | 否                  | 否                | 与 mAdapter 一致，当 mAdapter 被更改时，mCacheViews 即被缓存至 mRecyclerPool | 默认上限为二，即缓存屏幕外两个 ItemView                      |
+| mViewCacheExtension |                     |                   |                                                              | 不直接使用，需要用户定制，默认不实现                         |
+| mRecyclerPool       | 否                  | 是                | 与自身生命周期一致，不再被引用时即被释放                     | 默认上限为五，但是技术上可以实现所有 RecyclerViewPool共用同一个 |
+
+2.缓存对象不同
+
+RecyclerView 缓存的对象为 ViewHolder，ListView 缓存 View。
+
+#### 其他
+
+##### 扩展 RecyclerView
+
+##### 嵌套滑动
+
+##### 与 ListView 对比
+
+RecyclerView 相比 ListView，有一些明显的优点：
+
+1. 默认已经实现了 View 的复用，而且复用机制更加完善
+2. 支持局部刷新
+3. Item 添加、删除动画，Item 实现拖拽、侧滑删除等
+4. 更灵活的 LayoutManager
+
+当然，ListView 相比 RecyclerView 也有优点：
+
+1. addHeaderView、addFooterView 添加头视图、尾视图
+2. 通过 android:divider 设置自定义分割线
+3. setOnItemClickListener、setOnItemLongClickListener 设置点击事件以及长按事件
+
+
+
+#### 参考
+
+[让你明明白白的使用RecyclerView——SnapHelper详解](https://www.jianshu.com/p/e54db232df62)
+
+[Android ListView 与 RecyclerView 对比浅析--缓存机制](https://mp.weixin.qq.com/s?__biz=MzA3NTYzODYzMg==&mid=2653578065&idx=2&sn=25e64a8bb7b5934cf0ce2e49549a80d6&chksm=84b3b156b3c43840061c28869671da915a25cf3be54891f040a3532e1bb17f9d32e244b79e3f&scene=21#wechat_redirect)
