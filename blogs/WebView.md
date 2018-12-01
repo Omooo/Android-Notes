@@ -19,7 +19,7 @@ WebView
 
 #### 思维导图
 
-![](https://i.loli.net/2018/11/25/5bf9f14c0204b.png)
+![](https://github.com/Omooo/Android-Notes/blob/master/images/WebView.png?raw=true)
 
 #### 基本使用
 

@@ -9,7 +9,7 @@ RecyclerView
 2. 基本使用
 
    - 复杂布局的实现、添加头布局、尾布局
-   - 上拉刷新、下拉加载
+   - 下拉刷新、上拉加载
 
 3. 高级玩法
 
@@ -24,11 +24,12 @@ RecyclerView
 4. 源码分析系列
 
    - DefaultItemAnimator
+   - LinearSnapHelper
    - 缓存机制
      - ListView 的 RecycleBin
      - RecyclerView 的 Recycler
-     - 局部刷新
      - 两者区别
+   - 局部刷新
 
 5. 其他
 
@@ -42,6 +43,8 @@ RecyclerView
 6. 参考
 
 #### 思维导图
+
+![](https://github.com/Omooo/Android-Notes/blob/master/images/RecyclerView.png?raw=true)
 
 #### 基本使用
 
@@ -118,7 +121,42 @@ BaseRvAdapter 就是我们平常写的最基本的 Adapter，ItemView 都一样�
 
 关于复杂布局，其实也可以参考阿里开源的 V-Layout，不过它是内置了很多自定义 LayoutManager。
 
-##### 上拉刷新、下拉加载
+##### 下拉刷新、上拉加载
+
+上拉刷新直接用 SwipeRefreshLayout 就行了。
+
+下拉加载即：
+
+```java
+        mRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+                LinearLayoutManager manager = (LinearLayoutManager) recyclerView.getLayoutManager();
+                // 当不滑动时
+                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    //获取最后一个完全显示的itemPosition
+                    int lastItemPosition = manager.findLastCompletelyVisibleItemPosition();
+                    int itemCount = manager.getItemCount();
+
+                    // 判断是否滑动到了最后一个item，并且是向上滑动
+                    if (lastItemPosition == (itemCount - 1) && isSlidingUpward) {
+                        //加载更多
+                        onLoadMore();
+                    }
+                }
+            }
+
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                // 大于0表示正在向上滑动，小于等于0表示停止或向下滑动
+                isSlidingUpward = dy > 0;
+            }
+        });
+```
+
+
 
 #### 高级玩法
 
@@ -265,6 +303,8 @@ public class DividerItemDecoration extends ItemDecoration {
 ```
 
 [DividerItemDecoration](https://android.googlesource.com/platform/development/+/cc33d7e/samples/Support7Demos/src/com/example/android/supportv7/widget/decorator/DividerItemDecoration.java)
+
+不过，实际上，最简单的做法就是在每个 ItemView 的底部加一个 Divider，然后在 Adapter 里判断是最后一个 ItemView 的时候隐藏该 Divider 即可。
 
 ##### ItemAnimator
 
@@ -444,11 +484,75 @@ findSnapView 方法会找到当前 LayoutManager 最接近对齐位置的那个 
 
 calculateDistanceToFinalSnap 方法会计算需要对齐的 ItemView 与目标 View 之间的距离，返回一个大小为二的 int 数组，分别对应 x 轴和 y 轴方向上的距离。
 
-![](https://github.com/Omooo/Android-Notes/blob/master/images/SnapView.png)
+![](https://github.com/Omooo/Android-Notes/blob/master/images/SnapView.png?raw=true)
 
 
 
 ##### 万能 Adapter
+
+```java
+public abstract class QuickAdapter<T> extends RecyclerView.Adapter<QuickAdapter.VH> {
+
+    private List<T> mDatas;
+
+    public QuickAdapter(List<T> datas) {
+        mDatas = datas;
+    }
+
+    public abstract int getLayoutId(int viewType);
+
+    public abstract void convert(VH viewHolder, T data, int position);
+
+    @NonNull
+    @Override
+    public VH onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
+        return VH.get(viewGroup, getLayoutId(i));
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull VH vh, int i) {
+        convert(vh, mDatas.get(i), i);
+    }
+
+    @Override
+    public int getItemCount() {
+        return mDatas.size();
+    }
+
+    static class VH extends RecyclerView.ViewHolder {
+
+        private SparseArray<View> mViews;
+        private View mConvertView;
+
+        public VH(@NonNull View itemView) {
+            super(itemView);
+            mConvertView = itemView;
+            mViews = new SparseArray<>();
+        }
+
+        public static VH get(ViewGroup parent, int layoutId) {
+            View convertView = LayoutInflater.from(parent.getContext()).inflate(layoutId, parent, false);
+            return new VH(convertView);
+        }
+
+        public <T extends View> T getView(int id) {
+            View view = mViews.get(id);
+            if (view == null) {
+                view = mConvertView.findViewById(id);
+                mViews.put(id, view);
+            }
+            return (T) view;
+        }
+
+        public void setText(int id, String value) {
+            TextView view = getView(id);
+            view.setText(value);
+        }
+    }
+}
+```
+
+
 
 #### 源码分析系列
 
@@ -642,15 +746,215 @@ ArrayList<ViewHolder> mRemoveAnimations = new ArrayList();
     }
 ```
 
-##### 总结：
+总结：
 
 1. 动画的执行是有优先级之分的，Remove > Move > Change > Add
 2. 我们重写的 animateXxx 等方法只是把将要执行的动画添加到执行队列（ List ）中，然后在 runPendingAnimations 一并执行
 3. 真正的动画效果是通过 ViewPropertyAnimator 来实现的，它在多个动画同时执行时表现出更好的性能
 
+##### LinearSnapHelper
+
+首先看 LinearSnapHelper#attachToRecyclerView 方法：
+
+```java
+    public void attachToRecyclerView(@Nullable RecyclerView recyclerView) throws IllegalStateException {
+        //...
+        this.setupCallbacks();
+        this.mGravityScroller = new Scroller(this.mRecyclerView.getContext(), new DecelerateInterpolator());
+        this.snapToTargetExistingView();
+    }
+```
+
+创建一个 Scroller 对象用于辅助计算 Fling 的总距离，然后调用 snapToTargetExistingView 实现对 SnapView 的滚动对齐。
+
+LinearSnapHelper#snapToTargetExistingView 方法：
+
+```java
+    void snapToTargetExistingView() {
+        if (this.mRecyclerView != null) {
+            LayoutManager layoutManager = this.mRecyclerView.getLayoutManager();
+            if (layoutManager != null) {
+                View snapView = this.findSnapView(layoutManager);
+                if (snapView != null) {
+                    int[] snapDistance = this.calculateDistanceToFinalSnap(layoutManager, snapView);
+                    if (snapDistance[0] != 0 || snapDistance[1] != 0) {
+                        this.mRecyclerView.smoothScrollBy(snapDistance[0], snapDistance[1]);
+                    }
+
+                }
+            }
+        }
+    }
+```
+
+看到这大致流程就清楚了，首先是先找出 SnapView，然后计算出 SnapView 需要滚动的距离，最后通过 RecyclerView#smoothScrollBy 平滑滚动到指定位置就完事了。
+
+那它内部是如何计算距离的呢？
+
+```java
+    public int[] calculateDistanceToFinalSnap(@NonNull LayoutManager layoutManager, @NonNull View targetView) {
+        int[] out = new int[2];
+        if (layoutManager.canScrollHorizontally()) {
+            out[0] = this.distanceToCenter(layoutManager, targetView, this.getHorizontalHelper(layoutManager));
+        } else {
+            out[0] = 0;
+        }
+
+        if (layoutManager.canScrollVertically()) {
+            out[1] = this.distanceToCenter(layoutManager, targetView, this.getVerticalHelper(layoutManager));
+        } else {
+            out[1] = 0;
+        }
+
+        return out;
+    }
+```
+
+和我们前面说的一致，该方法会返回一个大小为二的整形数组，分别用来表示需要滚动的 X 距离和 Y 距离。而且对于 LinearSnapHelper 来说，它最终是以 RecyclerView 的中心对齐的，无疑，LinearSnapHelper#distanceToCenter 方法就是返回中心对齐的距离：
+
+```java
+    private int distanceToCenter(@NonNull LayoutManager layoutManager, @NonNull View targetView, OrientationHelper helper) {
+        int childCenter = helper.getDecoratedStart(targetView) + helper.getDecoratedMeasurement(targetView) / 2;
+        int containerCenter;
+        if (layoutManager.getClipToPadding()) {
+            containerCenter = helper.getStartAfterPadding() + helper.getTotalSpace() / 2;
+        } else {
+            containerCenter = helper.getEnd() / 2;
+        }
+
+        return childCenter - containerCenter;
+    }
+```
+
+看到这才发现距离都是通过 OrinetationHelper 来计算的，那就看一下方法的实参，即 this.getHorizontalHelper(layoutManager) 方法：
+
+```java
+    @NonNull
+    private OrientationHelper getVerticalHelper(@NonNull LayoutManager layoutManager) {
+        if (this.mVerticalHelper == null || this.mVerticalHelper.mLayoutManager != layoutManager) {
+            this.mVerticalHelper = OrientationHelper.createVerticalHelper(layoutManager);
+        }
+
+        return this.mVerticalHelper;
+    }
+```
+
+再往下看 OrientationHelper.createVerticalHelper(layoutManager) 方法：
+
+```java
+    public static OrientationHelper createHorizontalHelper(LayoutManager layoutManager) {
+        return new OrientationHelper(layoutManager) {
+    
+            //...
+            public int getEnd() {
+                return this.mLayoutManager.getWidth();
+            }
+
+            public int getStartAfterPadding() {
+                return this.mLayoutManager.getPaddingLeft();
+            }
+
+            public int getDecoratedMeasurement(View view) {
+                LayoutParams params = (LayoutParams)view.getLayoutParams();
+                return this.mLayoutManager.getDecoratedMeasuredWidth(view) + params.leftMargin + params.rightMargin;
+            }
+
+            public int getDecoratedStart(View view) {
+                LayoutParams params = (LayoutParams)view.getLayoutParams();
+                return this.mLayoutManager.getDecoratedLeft(view) - params.leftMargin;
+            }
+
+            public int getTotalSpace() {
+                return this.mLayoutManager.getWidth() - this.mLayoutManager.getPaddingLeft() - this.mLayoutManager.getPaddingRight();
+            }
+        };
+    }
+```
+
+看到这再回到 LinearSnapHelper#distanceToCenter 方法中去，它所做的事就是通过 LayoutManager 分别获取 SnapView 的中心坐标以及 RecyclerView 的中心坐标，两者之差就是要滑动的距离。
+
+总结：
+
+1. 首先通过 findTargetSnapPosition 方法获取到需要对齐的 ItemView
+2. 然后通过 distanceToCenter 方法来计算 ItemView 距离中心的距离，计算距离是通过 LayoutManager 来计算该 ItemView 中心点距离 RecyclerView 中心点的距离
+3. 通过 RecyclerView#smoothScrollBy 滚动该距离
+
 ##### 缓存机制
 
 RecyclerView 比 ListView 多两级缓存，支持多个离 ItemView 缓存，支持开发者自定义缓存处理逻辑。支持所有的 RecyclerView 共用同一个 RecyclerViewPool。
+
+ListView 为了保证 ItemView 的复用，实现了一套回收机制，该回收机制的实现类是 RecyclerBin，它实现了两级缓存：
+
+1. View[] mActiveViews 
+
+   缓存屏幕上的 View，在该缓存里的 View 不需要调用 getView()。
+
+2. ArrayList\<View>[] mScrapViews
+
+   每个 ItemType 对应一个列表作为回收站，缓存由于滚动而消失的 View，此处的 View 如果被复用，会以参数的形式传给 getView()。
+
+RecyclerView 是以 ViewHolder 单位来进行回收，Recycler 是 RecyclerView 回收机制的实现类，它实现了四级缓存：
+
+1. mAttachedScrap
+
+   缓存在屏幕上的 ViewHolder。
+
+2. mCachedViews
+
+   缓存屏幕外的 ViewHolder，默认为两个。ListView 对于屏幕外的缓存都会调用 getView。
+
+3. mViewCacheExtensions
+
+   需要用户定制，默认不实现。
+
+4. mRecyclerPool
+
+   缓存池，多个 RecyclerView 共用。
+
+RecyclerView#getViewForPosition 方法：
+
+```java
+        View getViewForPosition(int position, boolean dryRun) {
+            return this.tryGetViewHolderForPositionByDeadline(position, dryRun, 9223372036854775807L).itemView;
+        }
+
+        @Nullable
+        RecyclerView.ViewHolder tryGetViewHolderForPositionByDeadline(int position, boolean dryRun, long deadlineNs) {
+            if (position >= 0 && position < RecyclerView.this.mState.getItemCount()) {
+                //...
+                if (holder == null) {
+                    //...
+                    type = RecyclerView.this.mAdapter.getItemViewType(offsetPosition);
+                    if (RecyclerView.this.mAdapter.hasStableIds()) {
+                        holder = this.getScrapOrCachedViewForId(RecyclerView.this.mAdapter.getItemId(offsetPosition), type, dryRun);
+                        //...
+                    }
+
+                    if (holder == null && this.mViewCacheExtension != null) {
+                        View view = this.mViewCacheExtension.getViewForPositionAndType(this, position, type);
+                        //...
+                    }
+
+                    if (holder == null) {
+                        holder = this.getRecycledViewPool().getRecycledView(type);
+                        //...
+                    }
+
+                    if (holder == null) {
+						//...
+                        holder = RecyclerView.this.mAdapter.createViewHolder(RecyclerView.this, type);
+                       //...
+                    }
+                }
+                }
+                return holder;
+            } else {
+                throw new IndexOutOfBoundsException("Invalid item position " + position + "(" + position + "). Item count:" + RecyclerView.this.mState.getItemCount() + RecyclerView.this.exceptionLabel());
+            }
+        }
+```
+
+从上诉实现可以看出，依次从 mAttachedScrap、mCachedView、mViewCacheExtension、mRecyclerPool 寻找可复用的 ViewHolder，如果是从 mAttachedScrap 或 mCachedViews 中获取的 ViewHolder，则不会调用 onBindViewHolder，而如果从 mViewCacheExtension 或 mRecyclePool 中获取的 ViewHolder，则会调用 onBindViewHolder。如果上述没拿到缓存的 ViewHolder，则会通过 createViewHolder 来创建。
 
 具体来说：
 
@@ -676,11 +980,34 @@ RecyclerView 四级缓存：
 
 RecyclerView 缓存的对象为 ViewHolder，ListView 缓存 View。
 
+##### 局部刷新
+
+RecyclerView 已经提供了类似 notifyItemRemoved 等等局部刷新的 API，那么 ListView 如何实现局部刷新呢？
+
+```java
+    private void updateItemView(ListView listView, int position, List<String> data) {
+        int firstPos = listView.getFirstVisiblePosition();
+        int lastPos = listView.getLastVisiblePosition();
+        if (position >= firstPos && position <= lastPos) {
+            //可见时才更新，不可见时则在 getView 时更新
+            View view = listView.getChildAt(position);
+            VH vh = view.getTag();
+            vh.textView.setText(data.get(position));
+        }
+    }
+```
+
+
+
 #### 其他
 
 ##### 扩展 RecyclerView
 
+setEmptyView()
+
 ##### 嵌套滑动
+
+为了支持嵌套滑动，子 View 必须实现 NestedScrollingChild 接口，父 View 必须实现 NestedScrollingParent 接口，而 RecyclerView 实现了 NestedScrollingChild 接口。
 
 ##### 与 ListView 对比
 
@@ -704,3 +1031,7 @@ RecyclerView 相比 ListView，有一些明显的优点：
 [让你明明白白的使用RecyclerView——SnapHelper详解](https://www.jianshu.com/p/e54db232df62)
 
 [Android ListView 与 RecyclerView 对比浅析--缓存机制](https://mp.weixin.qq.com/s?__biz=MzA3NTYzODYzMg==&mid=2653578065&idx=2&sn=25e64a8bb7b5934cf0ce2e49549a80d6&chksm=84b3b156b3c43840061c28869671da915a25cf3be54891f040a3532e1bb17f9d32e244b79e3f&scene=21#wechat_redirect)
+
+[RecyclerView 必知必会](https://mp.weixin.qq.com/s/CzrKotyupXbYY6EY2HP_dA?)
+
+[RecyclerView 文章集](https://github.com/CymChad/CymChad.github.io)
