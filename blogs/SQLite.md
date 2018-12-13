@@ -11,13 +11,14 @@ Android 数据持久化之 SQLite
      - SQLiteDatabase
    - 常见问题
      - 数据库升级之更改表名、增删改字段
-     - 
    - 优化建议
      - 事务
      - 建立索引
 3. 参考
 
 #### 思维导图
+
+![](https://i.loli.net/2018/12/13/5c11cb9de011f.png)
 
 #### 基本使用
 
