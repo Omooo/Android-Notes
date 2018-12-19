@@ -13,12 +13,16 @@ AOP 之 AspectJ
    - 引入
    - 注解定义
    - 切点表达式
+   - ProceedingJoinPoint、JoinPoint
    - 示例
      - 全局点击事件拦截
      - 方法统计耗时
+     - 权限申请
 4. 参考
 
 #### 思维导图
+
+![](https://i.loli.net/2018/12/17/5c17b43b9662f.png)
 
 #### AOP
 
@@ -114,9 +118,35 @@ AOP 和 OOP 都只是一种编程思想，实现 AOP 的方式有以下几种：
 
 ```java
 execution(<@注解类型模式>? <修饰符模式>? <返回类型模式> <方法名模式>(<参数模式>) <异常模式>?)
+within(<@注解类型模式>? <修饰符模式>? <返回类型模式> <方法名模式>(<参数模式>) <异常模式>?)
 ```
 
 其中注解类型模式、修饰符模式、异常模式都是可选的。
+
+ 其中 execution() 是方法切点函数，表示目标类中满足某个匹配模式的方法连接点。而 winth() 是目标类切点函数，表示满足某个匹配模式的特定域中的类的所有连接点，比如某个包下所有的类。
+
+##### ProceedingJoinPoint、JoinPoint
+
+ProceedingJoinPoint 用于环绕通知，它是 JointPoint 的子类，与其不同的是 ProceedingJoinPoint 提供了 proceed() 方法用于执行切点方法。
+
+```java
+    @Around("execution( * cn.* (..))")
+    public void test(ProceedingJoinPoint joinPoint) throws Throwable {
+        //在方法执行之前执行
+        int i = 0;
+        joinPoint.proceed();
+        //在方法执行之后执行
+        i++;
+        
+        //获取签名信息
+        MethodSignature signature= (MethodSignature) joinPoint.getSignature();
+        signature.getName();    //方法名
+        signature.getDeclaringTypeName();    //类名
+        signature.getReturnType();  //返回类型
+        signature.getParameterNames();      //方法参数名
+        signature.getParameterTypes();      //方法参数类型
+    }
+```
 
 ##### 示例
 
@@ -135,6 +165,42 @@ execution(<@注解类型模式>? <修饰符模式>? <返回类型模式> <方法
 ```
 
 但是我们发现其实切点表达式是一样的，那就就可以抽成一个 Pointcut 来复用，即：
+
+```java
+    @Before(value = "onViewClick()")
+    public void onViewClickBefore(JoinPoint joinPoint) {
+        Log.i(TAG, "onViewClickBefore: 点击事件之前执行");
+    }
+
+    @After(value = "onViewClick()")
+    public void onViewClickAfter(JoinPoint joinPoint) {
+        Log.i(TAG, "onViewClickAfter: 点击事件之后执行");
+    }
+
+    @Pointcut("execution(* android.view.View.OnClickListener.onClick(android.view.View))")
+    public void onViewClick(){
+
+    }
+```
+
+方法统计耗时：
+
+```java
+    @Around("execution( * com.example.omooo.demoproject.MainActivity.* (..))")
+    public void bootTracker(ProceedingJoinPoint joinPoint) throws Throwable {
+        long beginTime = SystemClock.currentThreadTimeMillis();
+        joinPoint.proceed();
+        long endTime = SystemClock.currentThreadTimeMillis();
+        long dx = endTime - beginTime;
+        Log.i(TAG, joinPoint.getSignature().getDeclaringType().getName() + "#" + joinPoint.getSignature().getName()
+                + " " + dx + " ms");
+    }
+// com.example.omooo.demoproject.MainActivity#playAnimation 2 ms
+```
+
+权限申请：
+
+以上两个示例都是按照相似性统一切，而通过自定义注解修饰切人点，能够达到精确切。
 
 
 
