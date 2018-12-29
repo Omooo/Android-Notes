@@ -12,8 +12,11 @@ Android Notes
 1. Android 数据持久化
    - [SharedPreferences](https://github.com/Omooo/Android-Notes/blob/master/blogs/SharedPreferences.md)
    - [SQLite](https://github.com/Omooo/Android-Notes/blob/master/blogs/SQLite.md)
-
 2. [埋点](https://github.com/Omooo/Android-Notes/blob/master/blogs/%E5%9F%8B%E7%82%B9.md)
+
+#### 性能优化
+
+[I/O 优化]()
 
 #### Java
 
