@@ -10,17 +10,28 @@ Animator
    - 优缺点
    - 应用场景
 3. 补间动画
-   - 位移动画
-   - 缩放动画
-   - 旋转动画
-   - 透明度动画
-   - 组合动画
+   - 位移、旋转、缩放、透明度动画
    - 优缺点
    - 应用场景
 4. 属性动画
-5. 参考
+   - 层次关系
+   - ValueAnimator
+     - ObjectAnimator
+     - TimeAnimator
+   - AnimatorSet
+5. 插值器、估值器
+   - TypeEvaluator
+     - IntEvaluator
+     - FloutEvaluator
+     - ArgbEvaluator
+   - TimeInterpolator / Interpolator / BaseInterpolator
+     - LinearInterpolator
+     - AccelerateDecelerateInterpolator
+6. 参考
 
 #### 思维导图
+
+![](https://i.loli.net/2018/12/30/5c281a641cf56.png)
 
 #### 帧动画
 
@@ -123,9 +134,223 @@ Animator
 
 #### 属性动画
 
-![](https://i.loli.net/2018/12/29/5c271c4643fc8.png)
+##### 层次关系
+
+Animator
+
+- AnimatorSet
+- ValueAnimator
+  - ObjectAnimator
+  - TimeAnimator
+
+##### ValueAnimator
+
+常用使用方式：
+
+```java
+    private void setAnimator() {
+        mValueAnimator = new ValueAnimator();
+        mValueAnimator.setIntValues(0, 500);
+        mValueAnimator.setDuration(2000);
+        mValueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                Log.i(TAG, "onAnimationUpdate: " + animation.getAnimatedValue());
+                float y = ((int) animation.getAnimatedValue()) * 1.0f;
+                mIvFrame.setTranslationY(y);
+            }
+        });
+        mValueAnimator.start();
+    }
+```
+
+##### ObjectAnimator
+
+```java
+        ObjectAnimator animator = ObjectAnimator
+                .ofFloat(mBtnStart, "translationY", 0, 200)
+                .setDuration(2000);
+        animator.start();
+```
+
+ObjectAnimator 在每次更新的时候会自动走 setXxx 方法，所以就不需要像 ValueAnimator 一样手动添加监听器，但是 ValueAnimator 的灵活性更好。
+
+##### TimeAnimator
+
+同样是继承至 ValueAnimator，但是它只做一件事：提供一个时间流，每 18ms 回调一次。
+
+```java
+        mTimeAnimator = new TimeAnimator();
+        mTimeAnimator.setTimeListener(new TimeAnimator.TimeListener() {
+            @Override
+            public void onTimeUpdate(TimeAnimator animation, long totalTime, long deltaTime) {
+                //动画执行的总时间_动画从上一桢到当前桢的间隔时间，单位都是毫秒
+                Log.i(TAG, "onTimeUpdate: " + totalTime + "   " + deltaTime);
+            }
+        });
+```
+
+运行结果：
+
+```java
+2018-12-30 09:01:54.344 6656-6656/com.example.omooo.demoproject I/AnimatorActivity: onTimeUpdate: 0   0
+2018-12-30 09:01:54.346 6656-6656/com.example.omooo.demoproject I/AnimatorActivity: onTimeUpdate: 0   0
+2018-12-30 09:01:54.356 6656-6656/com.example.omooo.demoproject I/AnimatorActivity: onTimeUpdate: 7   7
+2018-12-30 09:01:54.375 6656-6656/com.example.omooo.demoproject I/AnimatorActivity: onTimeUpdate: 24   17
+2018-12-30 09:01:54.388 6656-6656/com.example.omooo.demoproject I/AnimatorActivity: onTimeUpdate: 42   18
+2018-12-30 09:01:54.407 6656-6656/com.example.omooo.demoproject I/AnimatorActivity: onTimeUpdate: 60   18
+2018-12-30 09:01:54.424 6656-6656/com.example.omooo.demoproject I/AnimatorActivity: onTimeUpdate: 78   18
+2018-12-30 09:01:54.444 6656-6656/com.example.omooo.demoproject I/AnimatorActivity: onTimeUpdate: 96   18
+```
 
 
+
+#### 估值器、插值器
+
+估值器表示属性的从初始值过渡到结束值变化的具体数值，而插值器则表示变化率，比如先加速后减速（默认）、匀速等等。
+
+##### 估值器
+
+估值器都需要实现 TypeEvaluator 接口：
+
+```java
+public interface TypeEvaluator<T> {
+    public T evaluate(float fraction, T startValue, T endValue);
+}
+```
+
+其实就是根据初始值和结束值算出一个值。
+
+系统已经有几个默认实现，比如 ArgbEvaluator、IntEvaluator、FloatEvaluator 等等。其实我们在用 ValueAnimator.ofArgb() 的时候，内部就是用 ArgbEvaluator 实现的，那对于 ValueAnimator.ofInt()、ValueAnimator.ofFloat() 方法是不是也是一样的道理呢？
+
+下面将介绍如何自定义估值器，所实现的功能：
+
+![](https://i.loli.net/2018/12/29/5c274685d3572.gif)
+
+首先定义按钮所需要的属性：
+
+```java
+public class ButtonInfo {
+    public int color;
+    public int x;
+    public int y;
+
+    public ButtonInfo(int color, int x, int y) {
+        this.color = color;
+        this.x = x;
+        this.y = y;
+    }
+
+    public ButtonInfo() {
+    }
+}
+```
+
+自定义估值器：
+
+```java
+public class ButtonEvaluator implements TypeEvaluator {
+
+    @Override
+    public Object evaluate(float fraction, Object startValue, Object endValue) {
+        ButtonInfo start = (ButtonInfo) startValue;
+        ButtonInfo end = (ButtonInfo) endValue;
+        ButtonInfo buttonInfo = new ButtonInfo();
+        ArgbEvaluator argbEvaluator = new ArgbEvaluator();
+        buttonInfo.color = (int) argbEvaluator.evaluate(fraction, ((ButtonInfo) startValue).color, ((ButtonInfo) endValue).color);
+        buttonInfo.x = (int) (fraction * (end.x - start.x) + start.x);
+        buttonInfo.y = (int) (fraction * (end.y - start.y) + start.y);
+        return buttonInfo;
+    }
+}
+```
+
+运用：
+
+```java
+    private void setTransAnimator() {
+        mValueAnimator = ValueAnimator.ofObject(new ButtonEvaluator(), new ButtonInfo(0xff94E1F7, 0, 0)
+                , new ButtonInfo(0xffF35519, 500, 500));
+        mValueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                ButtonInfo buttonInfo = (ButtonInfo) animation.getAnimatedValue();
+                mBtnStart.setBackgroundColor(buttonInfo.color);
+                mBtnStart.setTranslationX(buttonInfo.x);
+                mBtnStart.setTranslationY(buttonInfo.y);
+            }
+        });
+        mValueAnimator.setDuration(5000);
+        mValueAnimator.start();
+    }
+```
+
+可以，看出，实际上自定义估值器还是很简单。
+
+##### 插值器
+
+插值器需要实现 TimeInterpolator 或 Interpolator：
+
+```java
+public interface TimeInterpolator {
+    float getInterpolation(float input);
+}
+
+public interface Interpolator extends TimeInterpolator {
+	
+}
+```
+
+Android 系统内置了几种实现，默认是先加速后减速，即 AccelerateDecelerateInterpolator ，看一下源码实现：
+
+```java
+public class AccelerateDecelerateInterpolator extends BaseInterpolator
+        implements NativeInterpolatorFactory {
+    public float getInterpolation(float input) {
+        return (float)(Math.cos((input + 1) * Math.PI) / 2.0f) + 0.5f;
+    }
+	//...
+}
+```
+
+四五十行代码，首先明确的就是 value 值是 0 ~ 1，所以以上就是表示余旋函数在 pi/2 和 pi 之间，就是先加速后减速。
+
+那我们在看一下 LinearInterpolator 的源码：
+
+```java
+/**
+ * An interpolator where the rate of change is constant
+ */
+@HasNativeInterpolator
+public class LinearInterpolator extends BaseInterpolator implements NativeInterpolatorFactory {
+    public float getInterpolation(float input) {
+        return input;
+    }
+    //...
+}
+```
+
+那在自定义插值器就易如反掌了呀，定义一个先减速后加速的插值器，如下：
+
+```java
+public class DeceAcceInterpolator implements TimeInterpolator {
+    @Override
+    public float getInterpolation(float input) {
+        //余旋函数 0 ~ PI/2
+        return (float) Math.cos(input * Math.PI / 2);
+    }
+}
+```
+
+然后给 ValueAnimator 设置自定义的插值器：
+
+```java
+mValueAnimator.setInterpolator(new DeceAcceInterpolator());
+```
+
+![](https://i.loli.net/2018/12/29/5c274e1d38083.gif)
+
+啊？怎么反向了？看来设置变化率需要在 x 轴的下方呀。至于为什么？留个坑。
 
 #### 参考
 
