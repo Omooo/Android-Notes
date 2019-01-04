@@ -24,3 +24,7 @@ Android Notes
 [final 你需要知道的一切](https://github.com/Omooo/Android-Notes/blob/master/blogs/final.md)
 
 [String 你需要知道的一切](https://github.com/Omooo/Android-Notes/blob/master/blogs/String.md)
+
+#### JVM
+
+[方法内联]()
