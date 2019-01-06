@@ -36,3 +36,7 @@ Android Notes
 #### JVM
 
 [方法内联](https://github.com/Omooo/Android-Notes/blob/master/blogs/JVM/%E6%96%B9%E6%B3%95%E5%86%85%E8%81%94.md)
+
+#### 设计模式
+
+[单例模式]()
