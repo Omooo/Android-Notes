@@ -9,8 +9,13 @@ Android 数据持久化之 SQLite
    - 基本使用
      - SQLiteOpenHelper
      - SQLiteDatabase
+   - ORM
+     - greenDAO
+     - Room
+   - 进程与线程并发
    - 常见问题
      - 数据库升级之更改表名、增删改字段
+     - SQLiteDatabaseLockedException
    - 优化建议
      - 事务
      - 建立索引
@@ -18,7 +23,7 @@ Android 数据持久化之 SQLite
 
 #### 思维导图
 
-![](https://i.loli.net/2018/12/13/5c11cb9de011f.png)
+![](https://raw.githubusercontent.com/Omooo/Android-Notes/master/images/SQLite.png)
 
 #### 基本使用
 
@@ -57,6 +62,40 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
         sqLiteDatabase.endTransaction();
         sqLiteDatabase.close();
 ```
+
+#### ORM
+
+大部分为了提高开发效率，都会引入 ORM 框架，ORM 即对象关系映射，用面向对象的概念把数据库中表和对象关联起来。
+
+Android 中最常用的 ORM 框架有 greenDAO 和 Room，使用 ORM 框架很简单，但是易用性是需要牺牲部分执行效率为代价的。
+
+#### 进程与线程并发
+
+SQLiteDatabaseLockedException 是会经常遇到的一个问题，归根结底是因为并发导致，而 SQLite 的并发有两个维度，一个是多进程并发，一个是多线程并发。
+
+##### 多进程并发
+
+SQLite 默认是支持多进程并发操作的，它通过文件锁来控制多进程的并发。多进程可以同时获取 SHARED 锁来读取数据，但是只有一个进程可以获取 EXCLUSIVE 锁来写数据库。
+
+在 EXCLUSIVE 模式下，数据库连接在断开前都不会释放 SQLite 文件的锁，从而避免不必要的冲突，提高数据库访问的速度。
+
+##### 多线程并发
+
+相比多进程，多线程的数据库访问可能会更加常见。SQLite 支持多线程并发模式，系统 SQLite 会默认开启多线程 Multi-thread 模式。
+
+跟多进程的锁机制一样，为了实现简单，SQLite 锁的粒度都是数据库文件级别，并没有实现表级甚至行级的锁。还有需要说明的是，同一个句柄同一时间只有一个线程在操作，这个时候我们需要打开连接池 Connection Pool。
+
+跟多进程类似，多线程可以同时读取数据库数据，但是写数据依然是互斥的。SQLite 提供了 Busy Retry 的方案，即发生阻塞时会触发 Busy Handler，此时可以让线程休眠一段时间后，重新尝试操作。
+
+为了进一步提高并发性能，我们还可以打开 WAL（Write-Ahead Logging）模式。WAL 模式会将修改的数据单独写到一个 WAL 文件中，同时也会引入 WAL 日志文件锁。通过 WAL 模式读和写可以完全的并发执行，不会相互阻塞。
+
+```
+PRAGMA schema.journal_mode = WAL
+```
+
+**但是需要注意的是，写之间仍然不能并发。**如果出现多个写并发的情况，依然有可能出现 SQLiteDatabaseLockedException，这个时候可以让应用捕获这个异常，然后等待一段时间后重试。
+
+总的来说，通过连接池与 WAL 模式，可以很大程度上增加 SQLite 的读写并发，大大减少由于并发导致的等待耗时，建议在应用中尝试开启。
 
 #### 常见问题
 
@@ -147,6 +186,12 @@ SQLite 默认会为每个插入、更新操作创建一个事务，并且在每�
 
 这样，如果连续插入一百次数据实际是创建事务 -> 执行语句 -> 提交 这个过程被重复执行了一百次。如果我们显示的创建事务 -> 执行一百条数据 -> 提交 会使得这个创建事务和提交过程只做了一次，通过这种一次性事务可以使得性能大幅提升。尤其当数据库位于 SD 卡时，时间上能节省两个数量级左右。
 
+##### 页大小与缓存大小
+
+数据库就像一个小文件系统，事实上它内部也有页和缓存的概念。
+
+对于 SQLite 的 DB 文件来说，页是最小的存储单位。跟文件系统的页缓存一样，SQLite 会将读过的页缓存起来，用来加快下一次读取速度，页大小默认是 1024 Byte，缓存大小默认是 1000 页。建数据库的时候，就提前选择 4KB 作为默认的 page size 以获得更好的性能。
+
 ##### 其他优化
 
 1. 语句拼接使用 StringBuilder 替代 String
@@ -161,6 +206,12 @@ SQLite 默认会为每个插入、更新操作创建一个事务，并且在每�
 
 5. 异步线程
 
+##### 总结
+
+通过引入 ORM，可以大大的提升开发效率；通过 WAL 模式和连接池，可以提高 SQLite 的并发性能；通过正确的建立索引，可以提升 SQLite 的查询速度；通过调整默认的页大小和缓存大小，可以提升 SQLite 的整体性能。
+
 #### 参考
 
 [Android中数据库Sqlite的性能优化](https://www.cnblogs.com/daishuguang/p/4015478.html)
+
+[http://huili.github.io/sqlite/sqliteintro.html]()
