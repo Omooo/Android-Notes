@@ -19,11 +19,12 @@ Android 数据持久化之 SQLite
    - 优化建议
      - 事务
      - 建立索引
+     - 页大小和缓存大小
 3. 参考
 
 #### 思维导图
 
-![](https://raw.githubusercontent.com/Omooo/Android-Notes/master/images/SQLite.png)
+![](https://i.loli.net/2019/01/15/5c3dbf22234b0.png)
 
 #### 基本使用
 
@@ -89,11 +90,30 @@ SQLite 默认是支持多进程并发操作的，它通过文件锁来控制多�
 
 为了进一步提高并发性能，我们还可以打开 WAL（Write-Ahead Logging）模式。WAL 模式会将修改的数据单独写到一个 WAL 文件中，同时也会引入 WAL 日志文件锁。通过 WAL 模式读和写可以完全的并发执行，不会相互阻塞。
 
-```
-PRAGMA schema.journal_mode = WAL
+```java
+db.enableWriteAheadLogging();	//返回 false / true
 ```
 
-**但是需要注意的是，写之间仍然不能并发。**如果出现多个写并发的情况，依然有可能出现 SQLiteDatabaseLockedException，这个时候可以让应用捕获这个异常，然后等待一段时间后重试。
+如果开启了 WAL 模式，开启事务要使用 benginTransactionNonExclusive()，注意捕获异常，源码如下：
+
+```java
+    /**
+     * <pre>
+     *   db.beginTransactionNonExclusive();
+     *   try {
+     *     ...
+     *     db.setTransactionSuccessful();
+     *   } finally {
+     *     db.endTransaction();
+     *   }
+     * </pre>
+     */
+    public void beginTransactionNonExclusive() {
+        beginTransaction(null /* transactionStatusCallback */, false);
+    }
+```
+
+但是需要注意的是，**写之间仍然不能并发。**如果出现多个写并发的情况，依然有可能出现 SQLiteDatabaseLockedException，这个时候可以让应用捕获这个异常，然后等待一段时间后重试。
 
 总的来说，通过连接池与 WAL 模式，可以很大程度上增加 SQLite 的读写并发，大大减少由于并发导致的等待耗时，建议在应用中尝试开启。
 
@@ -190,7 +210,13 @@ SQLite 默认会为每个插入、更新操作创建一个事务，并且在每�
 
 数据库就像一个小文件系统，事实上它内部也有页和缓存的概念。
 
-对于 SQLite 的 DB 文件来说，页是最小的存储单位。跟文件系统的页缓存一样，SQLite 会将读过的页缓存起来，用来加快下一次读取速度，页大小默认是 1024 Byte，缓存大小默认是 1000 页。建数据库的时候，就提前选择 4KB 作为默认的 page size 以获得更好的性能。
+对于 SQLite 的 DB 文件来说，页是最小的存储单位。跟文件系统的页缓存一样，SQLite 会将读过的页缓存起来，用来加快下一次读取速度，页大小默认是 1024 Byte，缓存大小默认是 1000 页。如果使用 4KB 的 pageSize 性能能提升 5%～10% 左右，所以在建数据库的时候，就提前选择 4KB 作为默认的 page size 以获得更好的性能。
+
+```java
+db.setPageSize(1024 * 4);
+```
+
+
 
 ##### 其他优化
 
