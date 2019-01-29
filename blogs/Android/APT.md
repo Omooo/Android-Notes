@@ -1,30 +1,215 @@
 ---
-APT、JavaPoet 实现 ButterKnife
+APT
 ---
 
 #### 目录
 
 1. 思维导图
 2. 概述
-3. APT
-4. AutoService
-5. JavaPoet
-6. ButterKnife 的实现
-7. 参考
+3. 实现原理
+4. APT
+   - Processor
+     - init
+     - getSupportedAnnotationTypes
+     - getSupportedSourceVersion
+     - process
+   - Element
+     - TypeElement
+     - ExecutableElement
+     - VariableElement
+   - RoundEnvironment
+     - getElementsAnnotatedWith(BindView.class)
+5. AutoService
+6. JavaPoet
+7. ButterKnife 的实现
+   - APT
+   - AutoService
+   - JavaPoet
+8. 参考
 
 #### 思维导图
 
-![](https://i.loli.net/2019/01/26/5c4c00a69d7a5.png)
+![](https://i.loli.net/2019/01/29/5c5015c40825d.png)
 
 #### 概述
 
-用 APT、JavaPoet、AutoService 实现简单的 ButterKnife，APT 负责处理编译时注解，JavaPoet 用于生成 Java 代码，AutoService 负责注册注解处理器。
+APT 即注解处理器，它有三个主要用途：一是定义编译规则，并检查被编译的源文件；二是修改已有的源代码；三是生成新的源代码；其中，第二种涉及了 Java 编译器的内部 API，可以会存在兼容性问题，所以并不推荐，第三种较为常见。
+
+这节用 APT、JavaPoet、AutoService 实现简单的 ButterKnife，APT 负责处理编译时注解，JavaPoet 用于生成 Java 代码，AutoService 负责注册注解处理器。
+
+#### 实现原理
+
+在介绍注解处理器之前，我们先来了解一下 Java 编译器的工作流程。
+
+![](https://i.loli.net/2019/01/29/5c4fe444add11.png)
+
+如上图所示，Java 源代码的编译过程可以分为三个步骤：
+
+1. 将源文件解析成抽象语法树
+2. 调用已注册的注解处理器
+3. 生成字节码
+
+如果在第二步调用注解处理器过程中生成了新的源文件，那么编译器将重复第一二步骤，解析并处理新生成的源文件。
+
+所以可以这样理解，我们写的自定义注解处理器是给编译器写的，让它按照我们的逻辑来处理注解，所以也得向编译器注册注解处理器。
 
 #### APT 注解处理器 
 
 APT（Annotation Processing Tool）即注解处理器，是一种注解处理工具，用来在编译器扫描和处理注解，通过注解来生成 Java 文件。即以注解作为桥梁，通过预先规定好的代码生成规则来自动生成 Java 文件。此类注解框架的代表有 ButterKnife、Dagger2、EventBus 等。
 
 Java API 已经提供了扫描源码并解析注解的框架，开发者可以通过继承 AbstractProcessor 类来实现自己的注解处理逻辑。APT 的原理是在注解了某些代码元素（如字段、函数、类等）后，在编译时编译器会检查 AbstractProcessor 的子类，并且自动调用其 process() 方法，然后将添加了指定注解的所有代码元素作为参数传递给该方法，开发者在根据注解元素在编译期输出对应的 Java 代码。
+
+##### Processor
+
+所有的注解处理器都需要实现接口 Processor，AbstractProcessor 也是实现了该接口，对开发者更友好。
+
+```java
+public interface Processor {
+
+  void init(ProcessingEnvironment processingEnv);
+  
+  Set<String> getSupportedAnnotationTypes();
+  
+  SourceVersion getSupportedSourceVersion();
+  
+  boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv);
+  
+  ...
+}
+```
+
+它有四个重要方法，其中 init 方法用于存放注解处理器的初始化代码，之所以不用构造器，是因为在 Java 编译器中，注解处理器的实例是通过反射 API 生成的，也正是因为使用反射 API，每个注解处理器类都需要定义一个无参构造器。
+
+通常来说，当编写注解处理器时，我们不声明任何构造器，并依赖于 Java 编译器，而具体的初始化代码，则放入 init 方法之中。
+
+而剩下的三个方法中，getSupportedAnnotationTypes 方法将返回注解处理器所支持的注解类型，这些注解类型只需要用字符串形式表示即可。
+
+getSupportedSourceVersion 方法将返回该处理器所支持的 Java 版本，通常直接返回 SourceVersion.latestSupported()，而 process 方法则是最为关键的注解处理方法。
+
+process 方法接收两个参数，分别代表该注解处理器所能处理的注解类型，以及囊括当前轮生成的抽象语法树的 RoundEnvironment。
+
+通常我们这样使用 RoundEnvironment：
+
+```java
+for (Element element : env.getElementsAnnotatedWith(BindView.class)) {
+	//todo 
+}
+```
+
+这个 Element 表示一个程序元素，可以是包、类、或者方法，所有通过注解取得的元素都将以 Element 类型处理，准确来说是 Element 对象的子类处理。
+
+Element 的子类：
+
+- ExecutableElement 
+
+  表示某个类或接口的方法、构造方法或初始化程序，包括注释类型元素。
+
+  对应注解是 ElementType.METHOD 和 ElementType.CONSTRUCTOR。
+
+- PackageElement
+
+  表示一个包程序元素，提供对有关包及其成员的信息访问。
+
+  对应注解是 ElementType.PACKAGE。
+
+- TypeElement
+
+  表示一个类或接口程序元素，提供对有关类型及其成员的信息访问。
+
+  对应注解是 ElementType.TYPE。
+
+  注意：枚举类型是一种类，而注解类型是一种接口。
+
+- TypeParameterElement
+
+  表示类、接口、方法元素的类型参数。
+
+  对应注解是 ElementType.PARAMETER。
+
+- VariableElement
+
+  表示一个字段、enum 常量、方法或构造方法参数、局部变量或异常参数。
+
+  对应注解是 ElementType.FIELD 和 ElementType.LOCAL_VARIABLE。
+
+**不同类型的 Element 的信息获取方式不同。**
+
+```java
+@AutoService(Processor.class)
+public class InfoProcessor extends AbstractProcessor {
+
+    private Elements mElementsUtils;
+
+    @Override
+    public synchronized void init(ProcessingEnvironment processingEnvironment) {
+        super.init(processingEnvironment);
+        mElementsUtils = processingEnvironment.getElementUtils();
+    }
+
+    @Override
+    public boolean process(Set<? extends TypeElement> set, RoundEnvironment roundEnvironment) {
+
+        //解析类上的注解
+        for (Element element : roundEnvironment.getElementsAnnotatedWith(Info.class)) {
+            TypeElement classElement = (TypeElement) element;
+            PackageElement packageElement = (PackageElement) element.getEnclosingElement();
+            //全类名
+            System.out.println(classElement.getQualifiedName().toString());
+            //类名
+            System.out.println(classElement.getSimpleName().toString());
+            //包名
+            System.out.println(packageElement.getQualifiedName().toString());
+            //父类名
+            System.out.println(classElement.getSuperclass().toString());
+        }
+
+        //解析方法上的注解
+        for (Element element : roundEnvironment.getElementsAnnotatedWith(Info.class)) {
+            ExecutableElement executableElement = (ExecutableElement) element;
+            TypeElement classElement = (TypeElement) executableElement.getEnclosingElement();
+            PackageElement packageElement = mElementsUtils.getPackageOf(classElement);
+            //全类名
+            String fullClassName = classElement.getQualifiedName().toString();
+            //与上面一致
+            //...
+            //方法名
+            String methodName = executableElement.getSimpleName().toString();
+
+            //方法参数列表
+            List<? extends VariableElement> methodParameters = executableElement.getParameters();
+            List<String> types = new ArrayList<>();
+            for (VariableElement variableElement : methodParameters) {
+                TypeMirror methodParameterType = variableElement.asType();
+                if (methodParameterType != null) {
+                    TypeVariable typeVariable = (TypeVariable) methodParameterType;
+                    methodParameterType = typeVariable.getUpperBound();
+                }
+                //参数名
+                String parameterName = variableElement.getSimpleName().toString();
+                //参数类型
+                String parameteKind = methodParameterType.toString();
+                types.add(methodParameterType.toString());
+            }
+        }
+
+        //解析属性上的注解
+        for (Element element : roundEnvironment.getElementsAnnotatedWith(Info.class)) {
+            VariableElement variableElement = (VariableElement) element;
+            TypeElement classElement = (TypeElement) element.getEnclosingElement();
+            PackageElement packageElement = mElementsUtils.getPackageOf(classElement);
+            //类名
+            String className = classElement.getSimpleName().toString();
+            //与上面一致
+            //...
+
+            //类成员类型
+            TypeMirror typeMirror = variableElement.asType();
+            String type = typeMirror.toString();
+        }
+        return true;
+    }
+}
+```
 
 ##### AbstractProcessor
 
@@ -86,32 +271,6 @@ Types：用于处理类型数据的工具类；
 Filter：用于给注解处理器创建文件；
 
 Messager：用于给注解处理器报告错误、警告、提示等信息。
-
-##### Element 元素相关
-
-注解处理器工具扫描 Java 源文件，源文件中的每一部分都是程序中的 Element 元素，如包、类、方法、字段等。例如源代码中的类声明信息代表 TypeElement 类型元素，方法声明信息代表 ExecutableElement 类型元素，有了这些结构，就能完整的表示整个源代码信息了。
-
-Element 元素分为以下类型：
-
-1. ExcecutableElement
-
-   可执行元素，包括类或接口的方法、构造方法或初始化程序。
-
-2. PackageElement
-
-   包元素，提供对有关包及其成员的信息的访问。
-
-3. TypeElement
-
-   类或接口元素，提供对有关类型及其成员的信息的访问。
-
-4. TypeParameterElement
-
-   表示一般类、接口、方法或构造方法元素的形式类型参数，类型参数声明一个 TypeVariable
-
-5. VariableElement
-
-   表示一个字段、enum 常量、方法或构造方法参数、局部变量或异常参数。
 
 #### AutoServcie 注册注解处理器
 
@@ -301,6 +460,8 @@ public class ButterKnife {
 
 
 #### 参考
+
+[注解处理器](https://time.geekbang.org/column/article/40189)
 
 [教你实现一个轻量级的注解处理器 APT](https://mp.weixin.qq.com/s/3zrAzOUGpovRRbuYnce3uw)
 
