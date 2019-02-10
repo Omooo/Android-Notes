@@ -17,7 +17,7 @@ Android 数据持久化之 SharedPreferences
 
 #### 思维导图
 
-![](https://github.com/Omooo/Android-Notes/blob/master/images/SharedPreferences.png?raw=true)
+![](https://github.com/Omooo/Android-Notes/blob/master/images/Android/SharedPreferences.png?raw=true)
 
 #### SharedPreference
 

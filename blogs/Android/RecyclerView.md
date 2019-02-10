@@ -44,7 +44,7 @@ RecyclerView
 
 #### 思维导图
 
-![](https://github.com/Omooo/Android-Notes/blob/master/images/RecyclerView.png?raw=true)
+![](https://github.com/Omooo/Android-Notes/blob/master/images/Android/RecyclerView.png?raw=true)
 
 #### 基本使用
 
