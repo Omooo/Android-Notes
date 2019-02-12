@@ -67,6 +67,8 @@ Android Notes
 
 [JVM 是如何执行方法调用的？](https://github.com/Omooo/Android-Notes/blob/master/blogs/JVM/JVM%20%E6%98%AF%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%96%B9%E6%B3%95%E8%B0%83%E7%94%A8%E7%9A%84%EF%BC%9F.md)
 
+[循环优化](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/%E5%BE%AA%E7%8E%AF%E4%BC%98%E5%8C%96.md)
+
 #### 设计模式
 
 [单例模式](https://github.com/Omooo/Android-Notes/blob/master/blogs/DesignMode/%E5%8D%95%E4%BE%8B%E6%A8%A1%E5%BC%8F.md)
