@@ -13,7 +13,8 @@ Handler 消息机制
    - Looper
    - MessageQueue
 5. 常见问题汇总
-6. 参考
+6. 总结
+7. 参考
 
 #### 思维导图
 
@@ -72,7 +73,7 @@ Handler 源码其实并不多，我们先来看一下构造方法：
     
 	//实际上以上前两种都会调用以下构造方法
 	//后两种构造方法其实会在使用 HandlerThread 的时候会用到，就不多阐述了
-    public Handler(Callback callback, boolean async) {
+	public Handler(Callback callback, boolean async) {
 		//初始化 Looper 并关联 MessageQueue 对象
         mLooper = Looper.myLooper();
         if (mLooper == null) {
@@ -143,32 +144,26 @@ ActivityThread.main 方法源码如下：
 
 ```java
     //第一种方式
-	public final boolean post(Runnable r)
-    {
-       return  sendMessageDelayed(getPostMessage(r), 0);
+	public final boolean post(Runnable r){
+    	return  sendMessageDelayed(getPostMessage(r), 0);
     }
-    public final boolean postDelayed(Runnable r, long delayMillis)
-    {
-        return sendMessageDelayed(getPostMessage(r), delayMillis);
+    public final boolean postDelayed(Runnable r, long delayMillis){
+    	return sendMessageDelayed(getPostMessage(r), delayMillis);
     }
-    public final boolean sendMessageDelayed(Message msg, long delayMillis)
-    {
+    public final boolean sendMessageDelayed(Message msg, long delayMillis){
         if (delayMillis < 0) {
             delayMillis = 0;
         }
         return sendMessageAtTime(msg, SystemClock.uptimeMillis() + delayMillis);
     }
 	//第二种方式
-    public final boolean sendMessage(Message msg)
-    {
+    public final boolean sendMessage(Message msg){
         return sendMessageDelayed(msg, 0);
     }
-    public final boolean sendEmptyMessage(int what)
-    {
+    public final boolean sendEmptyMessage(int what){
         return sendEmptyMessageDelayed(what, 0);
     }
-    public final boolean sendMessageDelayed(Message msg, long delayMillis)
-    {
+    public final boolean sendMessageDelayed(Message msg, long delayMillis){
         if (delayMillis < 0) {
             delayMillis = 0;
         }
@@ -481,6 +476,16 @@ MessageQueue 有两个重要方法，一个是 enqueueMessage 用于存消息，
    如果按照 Message.next 方法的注释来解释的话，如果返回的 Message 为空，就说明消息队列已经退出了，这种情况下只能说明应用已经退出了。这也正符合我们开头所说的，Android 本身是消息驱动，所以没有消息几乎是不可能的事；如果按照源码分析，Message.next() 方法可能会阻塞是因为如果消息需要延迟处理（sendMessageDelayed等），那就需要阻塞等待时间到了才会把消息取出然后分发出去。然后这个 ANR 完全是两个概念，ANR 本质上是因为消息未得到及时处理而导致的。同时，从另外一方面来说，对于 CPU 来说，线程无非就是一段可执行的代码，执行完之后就结束了。而对于 Android 主线程来说，不可能运行一段时间之后就自己退出了，那就需要使用死循环，保证应用不会退出。这样一想，其实这样的安排还是很有道理的。
 
    这里，推荐一个说法：[https://www.zhihu.com/question/34652589/answer/90344494](https://www.zhihu.com/question/34652589/answer/90344494)
+
+#### 总结
+
+一张图说明一切：
+
+![](https://i.loli.net/2019/02/14/5c64ece515ff8.jpg)
+
+图片来源：
+
+[Android消息机制1-Handler(Java层)](http://gityuan.com/2015/12/26/handler-message-framework/)
 
 #### 参考
 

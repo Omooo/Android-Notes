@@ -14,6 +14,8 @@ Android Notes
 
 [ContentProvider](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/ContextProvider.md)
 
+[Fragment](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Fragment.md)
+
 ##### 控件相关
 
 1. [WebView](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/WebView.md)
@@ -87,3 +89,7 @@ Android Notes
 [异或，原来这么有用](https://github.com/Omooo/Android-Notes/blob/master/blogs/Algorithm/%E5%BC%82%E6%88%96%E5%BA%94%E7%94%A8.md)
 
 [一篇文章搞定 HashMap](https://github.com/Omooo/Android-Notes/blob/master/blogs/Algorithm/HashMap.md)
+
+#### 笔试
+
+[央视电影网 --- Mr.S 大佬](https://github.com/Omooo/Android-Notes/tree/master/blogs/Android/%E7%AC%94%E8%AF%95%E9%A2%98/%E5%A4%AE%E8%A7%86%E7%94%B5%E5%BD%B1%E7%BD%91%20---%20Mr.S%20%E5%A4%A7%E4%BD%AC.md)
