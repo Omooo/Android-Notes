@@ -22,7 +22,8 @@ Fragment
    5. 回退栈的理解
    6. Fragment 重叠
    7. onActivityResult()
-9. 参考
+9. 源码分析
+10. 参考
 
 #### 思维导图
 
@@ -234,6 +235,105 @@ Activity 也可以使用 findFragmentById 或 findFragmentByTag 来获取 Fragme
    Fragment 类提供了 startActivityForResult 方法用于 Activity 间的页面跳转和数据回传，其实内部也是调用了 Activity 的对应方法，但是在页面返回时 Fragment 没有提供 setResult 方法，但是可以通过拿宿主 Activity 实现。
 
    但是仍要注意的一点是，嵌套的 Fragment 需要一级一级的分发。
+
+#### 源码分析
+
+##### FragmentManager
+
+我们通过在 Activity 在 getSupportFragmentManager 获取的 FragmentManager 其实是 FragmentManagerImpl，它也是抽象类 FragmentManager 的唯一实现类。
+
+FragmentManagerImpl 里面有两个重要方法：
+
+1. beginTransaction()
+
+   ```java
+   public FragmentTransaction beginTransaction() {
+   	return new BackStackRecord(this);
+   }
+   ```
+
+   这里 BackStackRecord 也是抽象类 FragmentTransaction 的唯一实现。
+
+2. popBackStack()
+
+   ```java
+   	public void popBackStack() {
+   		enqueueAction(new PopBackStackState(null, -1, 0), false);
+   	}
+       public void enqueueAction(OpGenerator action, boolean allowStateLoss) {
+           if (!allowStateLoss) {
+               checkStateLoss();
+           }
+           synchronized (this) {
+               if (mPendingActions == null) {
+                   mPendingActions = new ArrayList<>();
+               }
+               mPendingActions.add(action);
+               scheduleCommit();
+           }
+       }
+   ```
+
+##### BackStackRecord
+
+```java
+final class BackStackRecord extends FragmentTransaction implements
+        FragmentManager.BackStackEntry, FragmentManagerImpl.OpGenerator {
+
+    final FragmentManagerImpl mManager;
+	// 构造 Op 的标识位
+    static final int OP_NULL = 0;
+    static final int OP_ADD = 1;
+    static final int OP_REPLACE = 2;
+    static final int OP_REMOVE = 3;
+	//...
+
+    static final class Op {
+        //add、replace、remove 标志位
+        int cmd;
+        Fragment fragment;
+        //进入退出动画
+        int enterAnim;
+        int exitAnim;
+        int popEnterAnim;
+        int popExitAnim;
+
+        Op() {
+        }
+		
+        Op(int cmd, Fragment fragment) {
+            this.cmd = cmd;
+            this.fragment = fragment;
+        }
+    }
+	//操作集合
+    ArrayList<Op> mOps = new ArrayList<>();
+}    
+```
+
+我们通过 FragmentTransaction add Fragment 时：
+
+```java
+    	public FragmentTransaction add(int containerViewId, Fragment fragment){
+        	doAddOp(containerViewId, fragment, null, OP_ADD);
+        	return this;
+    	}
+
+        private void doAddOp(int containerViewId, Fragment fragment, String tag, int opcmd) {
+        fragment.mFragmentManager = mManager;
+        addOp(new Op(opcmd, fragment));
+    	}
+
+    	void addOp(Op op) {
+        	mOps.add(op);
+            op.enterAnim = mEnterAnim;
+            op.exitAnim = mExitAnim;
+        	op.popEnterAnim = mPopEnterAnim;
+        	op.popExitAnim = mPopExitAnim;
+    	}
+```
+
+
 
 #### 参考
 
