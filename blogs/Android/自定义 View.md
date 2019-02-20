@@ -10,10 +10,15 @@
    - 颜色
 3. 自定义 View 
    - 分类和流程
-   - Canvas 之绘制图形
-   - Canavs 之画布操作
-4. 实战
-5. 参考
+   - Canvas 之常用 API
+   - MotionEvent
+   - 手势检测
+4. 常见问题汇总
+   - 处理 warp_content 
+   - 处理 padding
+   - 处理 margin
+5. 实战之酷炫进度条
+6. 参考
 
 #### 前言
 
@@ -167,5 +172,257 @@ onDraw 是实际绘制的部分，使用 Canvas 绘制。
     }
 ```
 
-#### 自定义 View 之 Canvas 绘制基本图形
+#### 自定义 View 之 Canvas 常用 API
 
+| 操作类型     | 相关 API                                                     | 备注                                       |
+| ------------ | ------------------------------------------------------------ | ------------------------------------------ |
+| 绘制颜色     | drawColor、drawRGB、drawARGB                                 | 使用单一颜色填充整个画布                   |
+| 绘制基本图形 | drawPoint、drawPoints、drawLine、drawLines、drawRect、drawRoundRect、drawOval、drawCircle、drawArc | 绘制点、线、矩形、圆角矩形、椭圆、圆、圆弧 |
+| 绘制图片     | drawBitmap、drawPicture                                      | 绘制位图和图片                             |
+| 绘制路径     | drawPath                                                     | 绘制路径，绘制贝塞尔曲线                   |
+| 画布裁剪     | clipPath、clipRect                                           | 设置画布的显示区域                         |
+| 画布变换     | translate、scale、rotate、skew                               | 位移、缩放、旋转、错切                     |
+
+#### MotionEvent
+
+| 事件          | 简介                               |
+| ------------- | ---------------------------------- |
+| ACTION_DOWN   | 手指初次接触屏幕时触发             |
+| ACTION_MOVE   | 手指在屏幕上滑动时触发，会多次触发 |
+| ACTION_UP     | 手指离开屏幕时触发                 |
+| ACTION_CANCEL | 事件被上层拦截时触发               |
+
+这里主要说下 ACTION_CANCEL，它的触发条件是事件被上层拦截。但是我们知道，在事件分发中，如果父 View 拦截了事件，那么子 View 是收不到任何事件的。所以这个 ACTION_CANCEL 的正确触发条件是：
+
+**只有父 View 回收事件处理权的时候，子 View 才会收到一个 ACTION_CANCEL 事件。**
+
+举个例子：
+
+上层 View 是一个 RecyclerView，它收到了一个 ACTION_DOWN 事件，由于这可能是个点击事件，所以它先传递给了对应的 ItemView，询问 ItemView 是否需要这个事件，然后接下来又传递过来一个 ACTION_MOVE 事件，且移动的方向和 RecyclerView 的可滑动方向一致，这时候 RecyclerView 判断这个事件是滚动事件，于是要回收事件处理权，这时候对应的 ItemView 就会收到一个 ACTION_CANCEL，并且不会再收到后续事件。
+
+#### 手势检测（GestureDetector）
+
+GestureDetector 可以使用 MotionEvents 检测各种手势和事件，使用起来也很简单～
+
+```java
+        final GestureDetector detector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onDoubleTap(MotionEvent e) {
+                Toast.makeText(WidgetActivity.this, "双击事件", Toast.LENGTH_SHORT).show();
+                return super.onDoubleTap(e);
+            }
+        });
+
+        mButton.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                return detector.onTouchEvent(event);
+            }
+        });
+```
+
+#### 常见问题汇总
+
+##### 处理 warp_content
+
+1. 自定义 View 的处理
+
+   如果我们不处理自定义 View 中的 warp_content，那么它和 match_parent 的效果一样。这里我们需要在 onMeasure() 里面做特殊处理：
+
+   ```java
+       protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+           //获取宽度尺寸和宽度测量模式
+           int widthSize = MeasureSpec.getSize(widthMeasureSpec);
+           int widthMode = MeasureSpec.getMode(widthMeasureSpec);
+   
+           int heightSize = MeasureSpec.getSize(heightMeasureSpec);
+           int heightMode = MeasureSpec.getMode(heightMeasureSpec);
+   
+           int defaultWidth = 200; //默认值
+           int defaultHeight = 200;
+   
+           setMeasuredDimension(widthSize, heightSize);
+           if (widthMode == MeasureSpec.AT_MOST && heightMode == MeasureSpec.AT_MOST) {
+               setMeasuredDimension(defaultWidth, defaultHeight);
+           } else if (widthMode == MeasureSpec.AT_MOST) {
+               setMeasuredDimension(defaultWidth, heightSize);
+           } else if (heightMode == MeasureSpec.AT_MOST) {
+               setMeasuredDimension(widthSize, defaultHeight);
+           }
+       }
+   ```
+
+   可以看到，其实我们只是当是 warp_content 的时候设置一个默认值，但是这样不灵活，我们可以在自定义属性中设置。其次，我们可以参考系统对 TextView 的设置，它会根据文字的大小来设置默认宽高。
+
+2. 自定义 ViewGroup 的处理
+
+   ```java
+       protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+           super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+           //将所有的子 View 进行测量，这会触发每个子 View 的 onMeasure
+           //measureChild 是对单个 View 进行测量
+           measureChildren(widthMeasureSpec, heightMeasureSpec);
+   
+           int widthMode = MeasureSpec.getMode(widthMeasureSpec);
+           int widthSize = MeasureSpec.getSize(widthMeasureSpec);
+           int heightMode = MeasureSpec.getMode(heightMeasureSpec);
+           int heightSize = MeasureSpec.getSize(heightMeasureSpec);
+   
+           int childCount = getChildCount();
+           if (childCount == 0) {
+               setMeasuredDimension(0, 0);
+           } else {
+               if (widthMode == MeasureSpec.AT_MOST && heightMode == MeasureSpec.AT_MOST) {
+                   int height = getTotalHeight();      //获取子 View 高度加和
+                   int width = getMaxChildWidth();     //获取子 View 的最大宽度
+                   setMeasuredDimension(width, height);
+               } else if (heightMode == MeasureSpec.AT_MOST) {
+                   setMeasuredDimension(widthSize, getTotalHeight());
+               } else if (widthMode == MeasureSpec.AT_MOST) {
+                   setMeasuredDimension(getMaxChildWidth(), heightSize);
+               }
+           }
+       }
+   ```
+
+   这里我们以自定义一个垂直的线性布局为例，当 ViewGroup 是 warp_content 的时候，高度为子 View 的高度和，宽度为子 View 中的最大宽度。
+
+##### 处理 padding
+
+1. 自定义 View 的处理
+
+   ```java
+       protected void onDraw(Canvas canvas) {
+           mPaint.setColor(Color.RED);
+           Rect rect = new Rect(0, 0, 100, 100);
+           Rect rect1 = new Rect(0 + getPaddingLeft(), 0 + getPaddingTop(), 100 - getPaddingRight(), 100 - getPaddingBottom());
+           canvas.drawRect(rect, mPaint);
+       }
+   ```
+
+2. 自定义 ViewGroup 的处理
+
+   ```java
+       protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+           super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+           //将所有的子 View 进行测量，这会触发每个子 View 的 onMeasure
+           //measureChild 是对单个 View 进行测量
+           measureChildren(widthMeasureSpec, heightMeasureSpec);
+   
+           int widthMode = MeasureSpec.getMode(widthMeasureSpec);
+           int widthSize = MeasureSpec.getSize(widthMeasureSpec);
+           int heightMode = MeasureSpec.getMode(heightMeasureSpec);
+           int heightSize = MeasureSpec.getSize(heightMeasureSpec);
+   
+           //获取子 View 高度加和 padding 值
+           int height = getTotalHeight() + getPaddingTop() + getPaddingBottom();      
+           //获取子 View 的最大宽度加 padding 值
+           int width = getMaxChildWidth() + getPaddingLeft() + getPaddingRight(); 
+   
+           int childCount = getChildCount();
+           if (childCount == 0) {
+               setMeasuredDimension(0, 0);
+           } else {
+               if (widthMode == MeasureSpec.AT_MOST && heightMode == MeasureSpec.AT_MOST) {
+                   setMeasuredDimension(Math.min(width, widthSize), Math.min(height, heightSize));
+               } else if (heightMode == MeasureSpec.AT_MOST) {
+                   setMeasuredDimension(widthSize, Math.min(height, heightSize));
+               } else if (widthMode == MeasureSpec.AT_MOST) {
+                   setMeasuredDimension(Math.min(width, widthSize), heightSize);
+               }
+           }
+       }
+   ```
+
+##### 处理 margin
+
+自定义 View 里 margin 是生效的，无需处理，只有 ViewGroup 才需要处理 margin。
+
+```java
+    protected void onLayout(boolean changed, int l, int t, int r, int b) {
+        int count = getChildCount();
+        int currentHeight = t;
+        for (int i = 0; i < count; i++) {
+            View child = getChildAt(i);
+            MarginLayoutParams lp = (MarginLayoutParams) child.getLayoutParams();
+            int height = child.getMeasuredHeight();
+            int width = child.getMeasuredWidth();
+            child.layout(l + lp.leftMargin, currentHeight + lp.topMargin, l + width + lp.leftMargin + lp.rightMargin, currentHeight + height + lp.topMargin + lp.bottomMargin);
+            currentHeight += height;
+        }
+    }
+
+    @Override
+    public LayoutParams generateLayoutParams(AttributeSet attrs) {
+        return new MarginLayoutParams(getContext(), attrs);
+    
+```
+
+#### 实战
+
+```java
+public class MyProgressView extends View {
+
+    private Paint mPaint;
+    private int mWidth;
+    private int mHeight;
+    private int textPadding = 5;
+    private int progress = 0;
+
+    public MyProgressView(Context context) {
+        super(context);
+        initPaint();
+    }
+
+    public MyProgressView(Context context, @Nullable AttributeSet attrs) {
+        super(context, attrs);
+        initPaint();
+    }
+
+    private void initPaint() {
+        mPaint = new Paint();
+        mPaint.setAntiAlias(true);
+        mPaint.setStrokeWidth(3);
+        mPaint.setStyle(Paint.Style.FILL);
+        mPaint.setTextSize(14);
+    }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        mWidth = w;
+        mHeight = h;
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        String text = progress + "%";
+        float textWidth = mPaint.measureText(text) + textPadding;
+        Rect rect = new Rect();
+        mPaint.getTextBounds(text, 0, text.length(), rect);
+        mPaint.setColor(Color.BLUE);
+
+        canvas.drawLine(0, mHeight / 2, progress * ((mWidth - textWidth) / 100), mHeight / 2, mPaint);
+        canvas.drawText(text, progress * ((mWidth - textWidth) / 100) + textPadding, (mHeight - rect.height()) / 2 + 2 * textPadding, mPaint);
+        mPaint.setColor(Color.GRAY);
+        canvas.drawLine(progress * ((mWidth - textWidth) / 100) + textWidth + textPadding, mHeight / 2, mWidth, mHeight / 2, mPaint);
+    }
+
+    public void setProgress(int progress) {
+        if (progress > 100) {
+            progress = 100;
+        } else if (progress < 0) {
+            progress = 0;
+        }
+        this.progress = progress;
+        postInvalidate();
+    }
+}
+```
+
+#### 参考
+
+[GcsSloop 自定义 View 系列](http://www.gcssloop.com/category/customview)
+
+[Android 自定义 View 之 margin 和 padding 的处理](https://blog.csdn.net/u012732170/article/details/55045472)
