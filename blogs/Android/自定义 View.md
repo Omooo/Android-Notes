@@ -360,6 +360,8 @@ GestureDetector 可以使用 MotionEvents 检测各种手势和事件，使用�
 
 #### 实战
 
+![](https://camo.githubusercontent.com/8d4de2d0ee4b42d27424f490dc54e4e1ecb851ff/68747470733a2f2f692e6c6f6c692e6e65742f323031382f30322f30342f356137363962326435323837372e676966)
+
 ```java
 public class MyProgressView extends View {
 

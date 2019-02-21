@@ -22,6 +22,7 @@ Android Notes
 2. [RecyclerView](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/RecyclerView.md)
 3. [ViewPager](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/ViewPager.md)
 4. [ConstraintLayout](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/ConstraintLayout.md)
+5. [自定义 View](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E8%87%AA%E5%AE%9A%E4%B9%89%20View.md)
 
 ##### 其他
 
@@ -92,6 +93,8 @@ Android Notes
 [异或，原来这么有用](https://github.com/Omooo/Android-Notes/blob/master/blogs/Algorithm/%E5%BC%82%E6%88%96%E5%BA%94%E7%94%A8.md)
 
 [一篇文章搞定 HashMap](https://github.com/Omooo/Android-Notes/blob/master/blogs/Algorithm/HashMap.md)
+
+[八大排序]()
 
 #### 计算机网络
 
