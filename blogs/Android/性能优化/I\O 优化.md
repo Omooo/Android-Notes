@@ -28,7 +28,7 @@
 
 说到 I/O 优化，就能想到不能再主线程读写大文件。但是 I/O 优化肯定不仅仅限于此，应用程序调用 read()、write() 方法，内核和硬件会做什么样的处理呢？整个流程又是怎么样的呢。
 
-![](https://github.com/Omooo/Android-Notes/blob/master/images/I/O%20%E6%B5%81%E7%A8%8B.png)
+![](https://github.com/Omooo/Android-Notes/blob/master/images/Android/I%5CO%20%E6%B5%81%E7%A8%8B.png)
 
 整个文件 I/O 操作由应用程序、文件系统和磁盘共同完成。首先应用程序将 I/O 命令发送给文件系统，然后文件系统会在合适的时机把 I/O 操作发给磁盘。
 
@@ -84,4 +84,6 @@ Cached:      652904 kB      // Page Cache
 #### Android I/O
 
 ##### Android 闪存
+
+#### I/O 监控
 
