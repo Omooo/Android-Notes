@@ -6,9 +6,12 @@ Http 与 Https
 
 1. Http
    - 报文格式
-   - ​
+   - 缓存机制
 2. Https
-3. 缓存机制
+   - 加密
+   - 身份验证
+   - 消息完整性验证
+3. HttpURLConnection
 4. 常见问题汇总
 5. 参考
 
@@ -102,7 +105,19 @@ status-code：状态码，不同的状态码对应不同的响应状态
 
 reason-phrase：原因短句，对状态码进行简单的描述
 
+Host：接受请求的服务器的主机名和端口
 
+Server：包含了处理请求的源服务器所用到的软件相关信息
+
+......
+
+##### 缓存机制
+
+Web 缓存是一种保存 Web 资源副本并在下次请求时直接使用该副本的技术。
+
+Web 缓存可以分为这几种：浏览器缓存、CDN 缓存、服务器缓存、数据库缓存。因为可能会直接使用副本免于重新发送请求或者仅仅确认资源没变无需重新传输资源实体，Web 缓存可以减少延迟加快网页打开速度、重复利用资源减少网络带宽消耗、降低请求次数或者减少传输内容从而减轻服务器压力。
+
+这里主要阐述浏览器 http 缓存，浏览器 http 缓存可以分为**强制缓存和协商缓存**。强制缓存和协商缓存最大也是最根本的区别在于：强制缓存命中的话不会发请求到服务器，协商缓存一定会发请求到服务器。通过资源的请求首部字段验证资源是否命中协商缓存，如果协商缓存命中，服务器会将这个请求返还，但是不会返回这个资源的实体，而是通知客户端可以从缓存中加载这个资源。
 
 #### 加密方式
 
@@ -127,14 +142,6 @@ decrpty(密文，私钥) = 明文
 ```
 
 对称加密速度快，加密时 CPU 资源消耗少；非对称加密对待加密的数据的长度有比较严格的要求，不能太长，但是实际上消息可能会很长，所以用对称加密来加密数据。
-
-#### 缓存机制
-
-Web 缓存是一种保存 Web 资源副本并在下次请求时直接使用该副本的技术。
-
-Web 缓存可以分为这几种：浏览器缓存、CDN 缓存、服务器缓存、数据库缓存。因为可能会直接使用副本免于重新发送请求或者仅仅确认资源没变无需重新传输资源实体，Web 缓存可以减少延迟加快网页打开速度、重复利用资源减少网络带宽消耗、降低请求次数或者减少传输内容从而减轻服务器压力。
-
-这里主要阐述浏览器 http 缓存，浏览器 http 缓存可以分为强制缓存和协商缓存。强制缓存和协商缓存最大也是最根本的区别在于：强制缓存命中的话不会发请求到服务器，协商缓存一定会发请求到服务器。通过资源的请求首部字段验证资源是否命中协商缓存，如果协商缓存命中，服务器会将这个请求返还，但是不会返回这个资源的实体，而是通知客户端可以从缓存中加载这个资源。
 
 #### Https
 
@@ -177,19 +184,74 @@ Https 就是在 http 上新增了一个 SSL/TLS，它提供了三个基本服务
 
 以上只有 random3 是加密的，所以用 random1+2+3 这三个随机数加密生成密钥。
 
+#### HttpURLConnection
+
+生在一个好年代呀，从一开始使用网络请求就是用的 OkHttp，对于 HttpURLConnection 浑然不知，现在基本上也不会用到 HttpURLConnection 了，所以就简单回顾一下就行了：
+
+```java
+    public String get(String path) throws IOException {
+        URL url=new URL(path);
+        HttpsURLConnection urlConnection = (HttpsURLConnection) url.openConnection();
+        urlConnection.setConnectTimeout(5000);
+        urlConnection.setRequestMethod("GET");
+        if (urlConnection.getResponseCode() == HttpURLConnection.HTTP_OK){
+            InputStream stream=urlConnection.getInputStream();
+            return convertStreamToString(stream);
+        }
+        return null;
+    }
+
+    public String convertStreamToString(InputStream is) {
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] buffer = new byte[1024];
+            int len = 0;
+            while ((len = is.read(buffer)) != -1) {
+                baos.write(buffer, 0, len);
+            }
+            baos.close();
+            is.close();
+            byte[] byteArray = baos.toByteArray();
+            return new String(byteArray);
+        } catch (IOException e) {
+            return null;
+        }
+    }
+```
+
 #### 常见问题汇总
 
-1. 数字证书的作用？
+1. 数字证书以及数字签名的作用？
 
-   避免公钥被替换。
+   数字证书能避免公钥被替换，而数字签名是为了校验公钥的合法性。
 
-2. 数字签名的作用？
-
-   校验公钥的合法性。
-
-3. 握手过程为什么要用到 3 个随机数？
+2. 握手过程为什么要用到 3 个随机数？
 
    Https 握手过程中出现的 3 个随机数，只有第三个是加密的随机数。由于很多主机可能产生弱随机数，因此三个随机数叠加更接近随机，比较安全。
+
+3. GET 和 POST 的区别？
+
+   通常对于这个问题，我们都能回答出：GET 请求的参数会拼接在 URL 后面，可见不安全；而 POST 请求的参数是放在主体中的，不可见安全。GET 请求可被缓存，而 POST 不行，等等。
+
+   以上都是从表现上看的，下面会从语义上来阐述两者的区别。
+
+   GET 的语义是获取资源，而 POST 的语义是处理资源。
+
+   当然用 GET 修改信息，POST 获取资源也是可以的，但是并不符合其语义。这里就提到了 RFC 定义了几个性质：
+
+   安全性：如果一个方法的语义在本质上是只读的，那么这个方法就是安全的。客户端向服务端的资源发起的请求如果是使用了安全的方法，就不应该引起服务端任何状态变化，因此也是无害的。
+
+   幂等性：幂等的概念是指同一个请求方法执行多次和仅执行一次的效果完全相同。引入幂等性主要是为了处理同一个请求重复发送的情况，比如在请求响应前失去连接，如果方法是幂等的，也就可以放心的重发一次请求。这也是浏览器在后退/刷新遇到 POST 请求会提示用户的原因：因为 POST 语义不是幂等的，重复请求可能会带来意想不到的后果。
+
+   可缓存性：顾名思义就是一个方法是否可以缓存，绝大多数浏览器仅仅支持 GET、HEAD 缓存。
+
+   但是**协议不等于实现**，所以我上面说用 GET 修改信息也是可以的。
+
+   所以，GET 和 POST 请求仅仅是在语义上的不同：GET 是安全、幂等、可缓存的；而 POST 是非安全、非幂等、（大部分实现）不可缓存的。
+
+   参考：[https://www.zhihu.com/question/28586791](https://www.zhihu.com/question/28586791)
+
+   这里纠正一个错误：GET 请求发一个包，POST 请求发两个包。
 
 #### 参考
 
