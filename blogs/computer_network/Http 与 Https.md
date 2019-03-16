@@ -5,6 +5,8 @@ Http 与 Https
 #### 目录
 
 1. Http
+   - 报文格式
+   - ​
 2. Https
 3. 缓存机制
 4. 常见问题汇总
@@ -12,9 +14,95 @@ Http 与 Https
 
 #### Http
 
-Http 即超文本传输协议，是常见的应用层协议，其传输的内容都是明文的，不安全。
+Http 即超文本传输协议，是一种建立在 TCP 上的无状态连接，属于应用层协议，其传输的内容都是明文的，不安全。Http 是互联网的基础协议，用于客户端与服务器端之间的通信，它规定了客户端与服务端之间的通信格式，包括请求和响应的格式。
 
-如果想要进行密文传输，就需要加密。
+基本的工作流程是客户端发送一个 Http 请求，服务端收到请求之后开始处理，处理结果返回给客户端，客户端对结果进行处理并展示。现在最流行的 Http 版本是 HTTP/1.1。
+
+##### 报文格式
+
+报文是在 Http 应用程序之间发送的数据块，它可以分为请求报文和响应报文，不过它们都是由三部分组成：起始行、首部以及主体。
+
+请求报文：
+
+```xml
+<method><path><version>
+<headers>
+
+<entity-body>  
+  
+//起始行  
+GET /tools/mockapi/448/weBankstep HTTP/1.1	
+//首部  
+Host: www.wanandroid.com
+Connection: keep-alive
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Referer: https://www.wanandroid.com/tools/mockapi
+Accept-Encoding: gzip, deflate, br
+Accept-Language: zh-CN,zh;q=0.9
+Cookie: xxx 
+//主体
+Get 请求通常不会发送主体，所以为空  
+```
+
+响应报文：
+
+```xml
+<version><status-code><reason-phrase>
+<headers>
+
+<entity-body>
+  
+//起始行
+HTTP/1.1 200 OK
+//首部  
+Server: Apache-Coyote/1.1
+Cache-Control: private
+Expires: Thu, 01 Jan 1970 08:00:00 CST
+Content-Type: application/json;charset=utf-8
+Transfer-Encoding: chunked
+Date: Fri, 15 Mar 2019 13:30:00 GMT
+//主体
+Response: {
+    "idInfoExisted": true,
+    "openAccountStep": "NONE"
+}
+```
+
+method：请求方法，常见的有 GET、POST、DELETE 等等。
+
+path：请求路径
+
+version：HTTP 版本，常见的是 HTTP/1.1
+
+status-code：状态码，不同的状态码对应不同的响应状态
+
+```
+状态码主要分为五类：
+1xx : 临时性消息
+	100：继续发送
+	101：正在切换协议
+2xx : 响应成功
+	200：响应成功
+3xx : 重定向
+	301：域名永久移动
+	302：暂时移动
+	304：内容未改变，请求被重定向到客户端本地缓存
+4xx : 客户端错误
+	400：客户端请求错误，服务器不理解请求的语法
+	401：未授权，要求进行身份验证
+	403：被禁止，服务器拒绝请求
+	404：找不到内容，服务器找不到请求的网页
+5xx : 服务器错误
+	500：服务器不可用
+	503：服务不可用
+```
+
+reason-phrase：原因短句，对状态码进行简单的描述
+
+
 
 #### 加密方式
 
@@ -110,4 +198,8 @@ Https 就是在 http 上新增了一个 SSL/TLS，它提供了三个基本服务
 [https://www.jianshu.com/p/ca7df01a9041](https://www.jianshu.com/p/ca7df01a9041)
 
 [浏览器HTTP缓存机制](https://juejin.im/post/5a673af06fb9a01c927ed880)
+
+[HTTP 协议完全解析](https://juejin.im/post/5c629c7c518825622f12da14)
+
+[HTTP 必知必会的那些](https://mp.weixin.qq.com/s?__biz=MzIwMTAzMTMxMg==&mid=2649492918&idx=1&sn=40030cd46cbba2bc639602aa341f3739&chksm=8eec8649b99b0f5f09aedc590901f61e1729ff03e6381a3127890381841dfcdd14af282a13fc&scene=21#wechat_redirect)
 
