@@ -238,6 +238,8 @@ db.setPageSize(1024 * 4);
 
 #### 参考
 
+[存储优化（下）：数据库SQLite的使用和优化](https://time.geekbang.org/column/article/77546)
+
 [Android中数据库Sqlite的性能优化](https://www.cnblogs.com/daishuguang/p/4015478.html)
 
-[http://huili.github.io/sqlite/sqliteintro.html]()
+[http://huili.github.io/sqlite/sqliteintro.html](http://huili.github.io/sqlite/sqliteintro.html)
