@@ -1,10 +1,8 @@
 ---
-Java 并发编程
+管程：并发编程的万能钥匙
 ---
 
-#### 目录
-
-#### 管程：并发编程的万能钥匙
+##### 前言
 
 管程，对应的英文是 Monitor，也称监视器。
 
@@ -69,3 +67,7 @@ Java 参考了 MESA 模型，语言内置的管程（synchronized）对 MESA 模
 ![](https://i.loli.net/2019/03/18/5c8f0eba877b4.png)
 
 Java 内置的管程方案（synchronized）使用简单，synchronized 关键字修饰的代码块，在编译期会自动生成相关加锁和解锁的代码，但是仅支持一个条件变量；而 Java SDK 并发包实现的管程支持多个条件变量，不过并发包里的锁，需要开发人员自己进行加锁和解锁操作。
+
+##### 摘自：
+
+[管程：并发编程的万能钥匙](https://time.geekbang.org/column/article/86089)
