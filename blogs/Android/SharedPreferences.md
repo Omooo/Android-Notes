@@ -84,6 +84,8 @@ private static ArrayMap<String, ArrayMap<File, SharedPreferencesImpl>> sSharedPr
 
 sSharedPrefsCache 是一个 ArrayMap，它存储的是包名和 packagePrefs 的映射关系，而 packagePrefs 存储的是 SharedPreferences 文件与 SharedPreferences 实例对象之间的映射关系。
 
+这里为什么要把 packageName 作为 key 呢？那是因为一个进程可以有多个应用程序，所以需要用包名来区分它们，在这里感谢 @水晶虾饺 的指正和淳淳教诲。
+
 这里，可以稍微总结一下，sSharedPrefsCache 会保存加载到内存中的 SharedPreferences 对象，当用户需要获取 SP 对象的时候，首先会在 sSharedPrefsCache 中查找，如果没找到，就创建一个新的 SP 对象添加到 sSharedPrefsCache 中，并且以当前应用的包名为 key。
 
 除此之外，需要注意的是，ContextImpl 类中并没有定义将 SharedPreferences 对象移除 sSharedPrefsCache 的方法，所以一旦加载到内存中，就会存在直至进程销毁。相对的，也就是说，SP 对象一旦加载到内存，后面任何时间使用，都是从内存中获取，不会再出现读取磁盘的情况。

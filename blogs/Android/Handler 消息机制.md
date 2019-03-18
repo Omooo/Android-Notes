@@ -477,6 +477,53 @@ MessageQueue 有两个重要方法，一个是 enqueueMessage 用于存消息，
 
    这里，推荐一个说法：[https://www.zhihu.com/question/34652589/answer/90344494](https://www.zhihu.com/question/34652589/answer/90344494)
 
+4. Handler 如何避免内存泄漏
+
+   Handler 允许我们发送延时消息，如果在延时期间用户关闭了 Activity，那么该 Activity 泄漏。这是因为内部类默认持有外部类的引用。
+
+   解决办法就是：将 Handler 定义为静态内部类的形式，在内部持有 Activity 的弱引用，并及时移除所有消息。
+
+   ```java
+   public class MainActivity extends AppCompatActivity {
+   
+       private MyHandler mMyHandler = new MyHandler(this);
+   
+       @Override
+       protected void onCreate(Bundle savedInstanceState) {
+           super.onCreate(savedInstanceState);
+           setContentView(R.layout.activity_main);
+       }
+   
+       private void handleMessage(Message msg) {
+   
+       }
+   
+       static class MyHandler extends Handler {
+           private WeakReference<Activity> mReference;
+   
+           MyHandler(Activity reference) {
+               mReference = new WeakReference<>(reference);
+           }
+   
+           @Override
+           public void handleMessage(Message msg) {
+               MainActivity activity = (MainActivity) mReference.get();
+               if (activity != null) {
+                   activity.handleMessage(msg);
+               }
+           }
+       }
+   
+       @Override
+       protected void onDestroy() {
+           mMyHandler.removeCallbacksAndMessages(null);
+           super.onDestroy();
+       }
+   }
+   ```
+
+   
+
 #### 总结
 
 一张图说明一切：
@@ -490,4 +537,6 @@ MessageQueue 有两个重要方法，一个是 enqueueMessage 用于存消息，
 #### 参考
 
 Android SDK 26 源码。
+
+[Handler 都没搞懂，拿什么去跳槽啊？](<https://juejin.im/post/5c74b64a6fb9a049be5e22fc>)
 
