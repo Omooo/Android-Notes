@@ -30,7 +30,7 @@ Android 应用是通过消息驱动运行的，在 Android 中一切皆消息，
 
 #### 基本使用
 
-基本使用不用多说，这里说一点就是尽量用第一种写法，第二种写法存在内存泄露。
+基本使用不用多说，有以下两种，但是都存在内存泄漏的情况，如何避免呢？可以通过静态内部类 + 弱引用来避免，文末常见问题汇总会有示例。
 
 ```java
     private Handler mHandler = new Handler(new Handler.Callback() {

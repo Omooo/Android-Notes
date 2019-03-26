@@ -41,6 +41,10 @@ Android Notes
 11. [热修复](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E7%83%AD%E4%BF%AE%E5%A4%8D.md)
 12. [事件分发机制](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E4%BA%8B%E4%BB%B6%E5%88%86%E5%8F%91%E6%9C%BA%E5%88%B6.md)
 13. [Handler 消息循环机制](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Handler%20%E6%B6%88%E6%81%AF%E6%9C%BA%E5%88%B6.md)
+14. [AsyncTask 源码分析](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/AsyncTask.md)
+15. [HandlerThread 源码分析](<https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/HandlerThread.md>)
+16. [IntentService 源码分析](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/IntentService.md)
+17. [View 工作原理](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/View%20%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86.md)
 
 ##### 性能优化
 
@@ -62,7 +66,7 @@ Android Notes
 
 [电量优化](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%E7%94%B5%E9%87%8F%E4%BC%98%E5%8C%96.md)
 
-#### Java
+#### Java 基础
 
 [final 你需要知道的一切](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/final.md)
 
@@ -76,9 +80,19 @@ Android Notes
 
 [异常 你需要知道的一切](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/%E5%BC%82%E5%B8%B8.md)
 
+[BIO、NIO、AIO](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/BIO%E3%80%81NIO%E3%80%81AIO.md)
+
 [UncaughtExceptionHandler](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/UncaughtExceptionHandler.md)
 
 [Java 5 - Java 10 新特性总结](https://github.com/Omooo/Android-Notes/tree/master/blogs/Java/Java%205%20-%20Java%2010%20%E6%96%B0%E7%89%B9%E6%80%A7)
+
+#### Java 并发
+
+[线程、线程池](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/%E5%B9%B6%E5%8F%91/%E7%BA%BF%E7%A8%8B%E3%80%81%E7%BA%BF%E7%A8%8B%E6%B1%A0.md)
+
+[线程生命周期](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/%E5%B9%B6%E5%8F%91/Java%20%E7%BA%BF%E7%A8%8B%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F.md)
+
+[并发编程的万能钥匙 - 管程 ( Monitor )](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/%E5%B9%B6%E5%8F%91/%E7%AE%A1%E7%A8%8B(Monitor).md)
 
 #### JVM
 
