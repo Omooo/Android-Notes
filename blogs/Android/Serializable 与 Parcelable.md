@@ -4,20 +4,32 @@ Serializable 与 Parcelable
 
 #### 目录
 
-1. 概述
-2. 具体使用
-3. 区别对比
-4. Serializable 常见问题
+1. 前言
+2. 概述
+3. 具体使用
+4. 区别对比
+5. Serializable 常见问题
    - serialVersionUID
    - static 与 transient 关键字
    - 父类的序列化
    - 序列化存储规则
    - 自定义序列化和反序列化规则
-5. 参考
+6. Externalizable
+7. 参考
+
+#### 前言
+
+Serializable 和 Parcelable 都是用来对象序列化的，那为什么需要序列化呢？我觉得有三种场景：
+
+1. 持久化存储
+2. 通过 Socket 进行网络传输
+3. 深拷贝
 
 #### 概述
 
 Serializable 和 Parcelable 是用来序列化和反序列化的，其中 Serializable 是 Java 提供的一个序列化接口，它是一个空接口，专门为对象提供标准的序列化和反序列化操作，使用起来比较简单。而 Parcelable 则稍显复杂，实现该接口重写两个模版方法，并且需要提供一个 Creator。
+
+Serializable 的原理是通过 ObjectInputStream 和 ObjectOutputStream 来实现的，整个序列化过程使用了大量的反射和临时变量，而且在序列化对象的时候，不仅会序列化对象本身，还需要递归序列化对象引用的其他对象。整个过程计算非常复杂，而且因为存在大量反射和 GC 的影响，序列化的性能会比较差。另外一方面，因为序列化文件包含的信息非常多，导致它的大小比 Class 文件本身还要大很多，这样又会导致 I/O 读写上的性能问题。
 
 #### 具体使用
 
@@ -90,7 +102,7 @@ Serializable 使用 I/O 读写存储在硬盘上，序列化过程中产生大�
 
 ##### serialVersionUID
 
-它是用来辅助序列化和反序列化的，虽然在序列化的时候系统会自动生成一个 UID，但是还是推荐在手动提供一个 serialVersionUID。序列化操作的时候系统会把当前类的 serialVersionUID 写入序列化文件中，当反序列化的时候会去检测文件中的 serialVersionUID，判断它是否与当前类的 serialVersionUID 一致，如果一致就说明序列化类与当前类版本一致，可以反序列化成功，否则就可能抛异常。手动添加 serialVersionUID 的话，即使当类结构发生变化时，系统也会尽可能的恢复原有类结构，也不至于抛异常。
+它是用来辅助序列化和反序列化的，虽然在序列化的时候系统会自动生成一个 UID，但是还是推荐在手动提供一个 serialVersionUID。序列化操作的时候系统会把当前类的 serialVersionUID 写入序列化文件中，当反序列化的时候会去检测文件中的 serialVersionUID，判断它是否与当前类的 serialVersionUID 一致，如果一致就说明序列化类与当前类版本一致，可以反序列化成功，否则就可能抛异常。手动添加 serialVersionUID 的话，即使当类结构发生变化时，系统也会尽可能的恢复原有类结构，也不至于抛 InvalidClassException 异常。
 
 ##### static 与 transient 关键字
 
@@ -114,13 +126,20 @@ Java 序列化机制为了节省磁盘空间，具有特定的存储规则，当
 
 ##### 自定义序列化和反序列化规则
 
-在序列化过程中，如果被序列化的类中定义了 writeObject 和 readObject 方法，虚拟机会试图调用对象类里的 writeObject 和 readObject 方法，进行用户自定义的序列化和反序列化。
+在序列化过程中，如果被序列化的类中定义了 writeObject 和 readObject 方法，虚拟机会试图调用对象类里的 writeObject 和 readObject 方法，进行用户自定义的序列化和反序列化。通过这两个方法，我们可以对某些字段做一些特殊修改，也可以实现序列化的加密功能。
 
 如果没有这样的方法，则默认调用的是 ObjectOutputStream 的 defaultWriteObject 方法和 ObjectInuputStream 的 defaultReadObject 方法。
 
-当某些信息是需要加密的时候，我们可以通过重写 readObject 或 writeObject 来控制序列化过程，还有比如在 ArrayList 中只序列化有数据的那一部分。
+writeReplace 和 readResovle 方法。这两个方法代理序列化的对象，可以实现自定义返回的序列化实例。那它有什么用呢？通过它们我们可以实现对象序列化的版本兼容。在反序列化生成新的对象的时候会破坏单例，我们可以添加一个 readResolver 方法直接返回单例对象即可。
 
-在反序列化生成新的对象的时候会破坏单例，我们可以添加一个 readResolver 方法直接返回单例对象即可。
+调用流程：
+
+```java
+//序列化
+writeReplace、writeObject
+//反序列化
+readObject、readResolve
+```
 
 ##### 实例
 
@@ -218,8 +237,67 @@ public class SerialTest {
 反序列化两次对象是否相等：true
 ```
 
+#### Externalizable
+
+Externalizable 继承了 Serializable 接口，并且需要实现 writeExternal 和 readExternal 两个方法，用来自定义序列化和反序列化逻辑。这是很有必要的，毕竟如果我们在 Serializable 自定义序列化和反序列化逻辑，需要我们自己提供 writeObject、readObject 方法，方法的参数已经抛出的异常都的我们自己写，每次我都是去看 ArrayList 的实现，有了 Externalizable，我们就可以只关注逻辑本身了。
+
+同时，前面我们说过，Serializable 在反序列化的时候是默认不走构造方法的，所以如果构造方法里面存在某些逻辑就需要注意了，而 Externalizable 是会走无参构造方法的。
+
+示例：
+
+```java
+public class ExternalizableTest {
+
+    public static void main(String[] args) throws Exception {
+        Bean bean = new Bean();
+        bean.setName("Omooo");
+        ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("tempFileV2"));
+        oos.writeObject(bean);
+        oos.flush();
+        oos.close();
+        System.out.println("静态变量反序列前: " + Bean.age);
+
+        File file = new File("tempFileV2");
+        ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
+        Bean readObject = (Bean) ois.readObject();
+        System.out.println(readObject.getName());
+    }
+
+    static class Bean implements Externalizable {
+
+
+        private String name;
+        public static int age;
+
+        public Bean() {
+            System.out.println("执行无参构造方法");
+            age++;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public void writeExternal(ObjectOutput out) throws IOException {
+            out.writeObject(name);
+        }
+
+        @Override
+        public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+            this.name = in.readObject().toString();
+            System.out.println("静态变量反序列化后: " + Bean.age);
+        }
+    }
+}
+```
+
 #### 参考
 
-[序列化与反序列化之 Parcelable 和 Serializable 浅析](https://juejin.im/entry/57e8d42e816dfa005ef310be)
+[Java 对象序列化](https://www.ibm.com/developerworks/cn/java/j-5things1/index.html)
 
 [Java 序列化的高级认识](<https://www.ibm.com/developerworks/cn/java/j-lo-serial/index.html>)
