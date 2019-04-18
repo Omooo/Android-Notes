@@ -36,4 +36,5 @@ ClassFile{
 5. interfaces_count 和 interfaces，这两个成员表示该类实现了多少个接口以及接口类的类名。和 this_class 一样，这两个成员也只是常量池数组里的索引号。真正的信息需要通过解析常量池的内容才能得到。
 6. fields_count 和 fields 包含了成员变量的数量以及它们的信息，成员变量信息由 field_info 结构体表示。
 7. methods_count 和 methods 包含了成员函数的数量以及它们的信息，成员函数信息由 method_info 结构体表示。
-8. attributes_count 和 attributes 包含了属性信息。属性信息由 attributes_info 结构体表示。属性包含哪些信息呢？比如调试信息就记录了某句代码对应源文件哪一行、函数对应的 Java 字节码也属于属性信息的一种。另外，源文件中的注解也属于注解。
+8. attributes_count 和 attributes 包含了属性信息。属性信息由 attributes_info 结构体表示。属性包含哪些信息呢？比如调试信息就记录了某句代码对应源文件哪一行、函数对应的 Java 字节码也属于属性信息的一种。另外，源文件中的注解也属于属性。
+

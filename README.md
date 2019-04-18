@@ -46,6 +46,16 @@ Android Notes
 16. [IntentService 源码分析](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/IntentService.md)
 17. [View 工作原理](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/View%20%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86.md)
 
+##### Gralde Plugin、Groovy
+
+[Gralde Plugin 入门指南](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Gradle%20Plugin.md)
+
+[Groovy 常用操作](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Gralde%20Plugin%20%E5%AE%9E%E8%B7%B5%E4%B9%8B%20TinyPng%20Plugin.md)
+
+##### JVM、ART 相关
+
+[Class 文件格式总览](https://github.com/Omooo/Android-Notes/blob/master/blogs/JVM/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3%20Class%20%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F/Class%20%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F%E6%80%BB%E8%A7%88.md)
+
 ##### 性能优化
 
 [I/O 优化](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/I%5CO%20%E4%BC%98%E5%8C%96.md)
