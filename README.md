@@ -50,7 +50,7 @@ Android Notes
 
 [Gralde Plugin 入门指南](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Gradle%20Plugin.md)
 
-[Groovy 常用操作](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Gralde%20Plugin%20%E5%AE%9E%E8%B7%B5%E4%B9%8B%20TinyPng%20Plugin.md)
+[Gralde Plugin 实践之 TinyPng Plugin](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Gralde%20Plugin%20%E5%AE%9E%E8%B7%B5%E4%B9%8B%20TinyPng%20Plugin.md)
 
 ##### JVM、ART 相关
 
@@ -103,6 +103,8 @@ Android Notes
 [线程生命周期](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/%E5%B9%B6%E5%8F%91/Java%20%E7%BA%BF%E7%A8%8B%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F.md)
 
 [并发编程的万能钥匙 - 管程 ( Monitor )](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/%E5%B9%B6%E5%8F%91/%E7%AE%A1%E7%A8%8B(Monitor).md)
+
+[Lock 和 Condition](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/并发/Lock 和 Condition.md)
 
 #### JVM
 
