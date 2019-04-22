@@ -76,6 +76,12 @@ Android Notes
 
 [电量优化](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%E7%94%B5%E9%87%8F%E4%BC%98%E5%8C%96.md)
 
+
+
+#### Framework
+
+[Android 系统架构]()
+
 #### Java 基础
 
 [final 你需要知道的一切](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/final.md)
