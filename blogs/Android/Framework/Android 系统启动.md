@@ -44,7 +44,48 @@ init 进程主要做了以下三件事：
 
 #### Zygote 进程启动过程
 
-在 Android 系统中，DVM 和 ART、应用程序进程以及运行系统的关键服务的 SystemServer 进程都是由 Zygote 进程来创建的，我们也将它称为孵化器。它通过 fork 的形式来创建应用程序进程和 SystemServer 进程。
+在 Android 系统中，DVM 和 ART、应用程序进程以及运行系统的关键服务的 SystemServer 进程都是由 Zygote 进程来创建的，我们也将它称为孵化器。它通过 fork 的形式来创建应用程序进程和 SystemServer 进程。由于 Zygote 进程在启动时会创建 DVM 或者 ART，因此通过 fork 而创建的应用程序进程和 SystemServer 进程可以在内部获取一个 DVM 或者 ART 的实例副本。
+
+我们知道，Zygote 进程是在 init 进程启动时创建的，起初 Zygote 进程的名字并不是叫 zygote，而是叫 app_process，这个名称是在 Android.mk 中定义的，Zygote 进程启动后，Linux 系统下的 pctrl 系统会调用 app_process，将其名称换成了 zygote。
+
+Zygote 进程都是通过 fork 自身来创建子进程的。再通过 JNI 调用 ZygoteInit 的 main 方法后，Zygote 便进入了 Java 框架层，此前是没有任何代码进入 Java 框架层的，也就是说，Zygote 开创了 Java 框架层。
+
+ZygoteInit#main：
+
+```java
+    public static void main(String argv[]) {
+        //...
+        try {
+						//...
+          	//1. 创建一个 Server 端的 Socket，socketName 为 zygote
+            zygoteServer.registerServerSocketFromEnv(socketName);
+            
+            if (!enableLazyPreload) {
+                bootTimingsTraceLog.traceBegin("ZygotePreload");
+                EventLog.writeEvent(LOG_BOOT_PROGRESS_PRELOAD_START,
+                    SystemClock.uptimeMillis());
+              	//2. 预加载资源和类
+                preload(bootTimingsTraceLog);
+                EventLog.writeEvent(LOG_BOOT_PROGRESS_PRELOAD_END,
+                    SystemClock.uptimeMillis());
+                bootTimingsTraceLog.traceEnd(); // ZygotePreload
+            } else {
+                Zygote.resetNicePriority();
+            }
+						//...
+            if (startSystemServer) {
+              	//3. 启动 SystemServer 进程
+                Runnable r = forkSystemServer(abiList, socketName, zygoteServer);
+						//4. 等待 AMS 请求
+            caller = zygoteServer.runSelectLoop(abiList);
+        } catch (Throwable ex) {
+            Log.e(TAG, "System zygote died with exception", ex);
+            throw ex;
+        } finally {
+            zygoteServer.closeServerSocket();
+        }
+    }
+```
 
 **总结：**
 
