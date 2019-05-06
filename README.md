@@ -48,9 +48,13 @@ Android Notes
 
 ##### Gralde Plugin、Groovy
 
-[Gralde Plugin 入门指南](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Gradle%20Plugin.md)
+[Gralde Plugin 入门指南](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Gradle_Plugin_Guide.md)
 
-[Gralde Plugin 实践之 TinyPng Plugin](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Gralde%20Plugin%20%E5%AE%9E%E8%B7%B5%E4%B9%8B%20TinyPng%20Plugin.md)
+[Gralde Plugin 实践之 TinyPng Plugin](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/TinyPngPlugin.md)
+
+《Android Gradle 权威指南读书笔记》
+
+​		[基础知识相关](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Android%20Gradle%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0%E4%B9%8B%E4%B8%80.md)
 
 ##### JVM、ART 相关
 

@@ -4,7 +4,7 @@ Gradle Plugin 之 Transform API
 
 #### 前言
 
-在前面两篇文章中，我们熟悉了 [Gradle Plugin](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Gradle Plugin.md) 的编写，同时也实践了一下，写了一个 [TinyPngPlugin](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Gralde Plugin 实践之 TinyPng Plugin.md) ，利用 TinyPng 在打包时压缩 res 下的所有的 png 图片，这是一个非常好的实践，希望你也能掌握。
+在前面两篇文章中，我们熟悉了 [Gradle Plugin](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Gradle_Plugin.md) 的编写，同时也实践了一下，写了一个 [TinyPngPlugin](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/TinyPngPlugin.md) ，利用 TinyPng 在打包时压缩 res 下的所有的 png 图片，这是一个非常好的实践，希望你也能掌握。
 
 本篇文章接着来讲解 Transfrom API，Transform 是用来对 class 转 dex 文件之前的 class 文件进行操作。
 

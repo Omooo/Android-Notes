@@ -4,7 +4,7 @@ Gralde Plugin 实践之 TinyPng Plugin
 
 #### 前言
 
-在上一篇文章中，我们熟悉了如何去实现一个[自定义的 Gradle Plugin](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Gradle%20Plugin.md)，本来按照计划这篇文章是讲 Transform API，但是考虑到学完新知识最好能实践一下，之前也讲到可以利用 TinyPng 在构建项目的时候批量压缩 res 下的所有 png 图片，今天我们就来实践一下，这个并不涉及到 Transform API 的使用，但是需要熟悉 Groovy 一些常见的操作，比如 Extensions、 Json 的解析和生成等，整个项目很简单，代码并不多，大胆 fork [TinyPngPlugin](https://github.com/surpriseprojects/TinyPngPlugin) 吧。
+在上一篇文章中，我们熟悉了如何去实现一个[自定义的 Gradle Plugin](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Gradle_Plugin_Guide.md)，本来按照计划这篇文章是讲 Transform API，但是考虑到学完新知识最好能实践一下，之前也讲到可以利用 TinyPng 在构建项目的时候批量压缩 res 下的所有 png 图片，今天我们就来实践一下，这个并不涉及到 Transform API 的使用，但是需要熟悉 Groovy 一些常见的操作，比如 Extensions、 Json 的解析和生成等，整个项目很简单，代码并不多，大胆 fork [TinyPngPlugin](https://github.com/surpriseprojects/TinyPngPlugin) 吧。
 
 #### 实现方式
 
