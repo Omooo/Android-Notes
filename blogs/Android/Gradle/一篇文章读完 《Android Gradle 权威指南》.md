@@ -1,0 +1,431 @@
+---
+一篇文章读完《Android Gradle 权威指南》
+---
+
+#### 目录
+
+1. 思维导图
+2. 前言
+3. Gradle 基础知识
+   - Gradle 命令行
+   - Gradle 日志
+   - Groovy 基础
+4. Gradle 构建脚本基础
+   - Settings 和 Build 文件
+   - 创建任务和任务依赖
+   - 自定义属性
+5. Gradle 任务进阶
+   - 任务分组和描述
+   - 任务执行分析
+   - 任务的 OnlyIf 断言
+
+#### 思维导图
+
+#### 前言
+
+在写完 [Gradle Plugin 入门指南](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Gradle Plugin.md) 和 [Gradle Plugin 实践之 TinyPng Plugin](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Gralde%20Plugin%20%E5%AE%9E%E8%B7%B5%E4%B9%8B%20TinyPng%20Plugin.md) 之后，总会有一些疑问，如果你仔细阅读过这两篇文章，你甚至会发现文章还有一些错误的说法，比如以下命令中 -q 参数的含义：
+
+```
+./gradlew task -q build
+```
+
+-q 的含义并不是表示静默输出，而是…..（下面会讲到
+
+《Android Gradle 权威指南》这本书理解起来相对比较简单，但是它解决了我的很多疑惑，我会把书中重要知识都在本文中记录下来。我希望读书是一种边解惑边吸收新知识的过程，我也正是以这种方式来写这篇文章的。
+
+感谢作者的著作～，受益匪浅。
+
+#### Gradle 基础知识
+
+Gradle 基础知识分为三块：Gradle 命令行、Gradle 日志、Groovy 基础。
+
+##### Gradle 命令行
+
+Gradle 命令一般用于执行一些 Task 。
+
+在前两篇文章，我们也接触到了两个 Gradle 命令，一个是用于执行我们自定义 task 的命令：
+
+```
+./gradlew task myCustomTask
+```
+
+一个是用于执行上传 jar 包依赖的命令：
+
+```
+./gradlew task uploadArchives
+```
+
+这个  uploadArchives Task 其实是 java plugin 里面的 Task，也就是说我们依赖了这个插件：
+
+```java
+apply plugin: 'java'
+```
+
+起初我一直以为这个 task 是 android 里面的，在 app 模块中我们会依赖 android plugin：
+
+```java
+apply plugin: 'com.android.application'
+```
+
+之所以，我们在 app 模块也能使用 uploadArchives 是因为 android plugin 是继承 java plugin 的。
+
+除此之外，Android 还内置了很多有用的 Task，我们可以通过执行：
+
+```
+./gradlew tasks
+```
+
+来查看所有的 tasks，这里我就贴出了部分输出：
+
+```
+> Task :tasks
+
+------------------------------------------------------------
+All tasks runnable from root project
+------------------------------------------------------------
+
+Android tasks
+-------------
+androidDependencies - Displays the Android dependencies of the project.
+signingReport - Displays the signing info for the base and test modules
+sourceSets - Prints out all the source sets defined in this project.
+
+Build tasks
+-----------
+//...
+build - Assembles and tests this project.
+clean - Deletes the build directory.
+//...
+```
+
+可以看到，tasks 是以分组进行输出的，前面是 task name，后面是 task description，我们自定义的 task 也是可以添加到某个分组里面的，也可以新建一个分组然后添加。
+
+比如我们可以执行上面 Android tasks 中的 androidDependencies 来查看项目中的所有依赖：
+
+```
+./gradlew task androidDependencies
+```
+
+当然，我们也可以一次执行多个任务，比如：
+
+```
+./gradlew task clean build
+```
+
+但是，需要主要的是两者的依赖关系，这个我们后面自定义 Task 的时候会讲到。
+
+##### Gradle 日志
+
+这个就是解决我们开头的那个错误的说法了。
+
+Gradle 日志是有日志级别的：
+
+| 级别      | 用于     |
+| --------- | -------- |
+| ERROR     | 错误消息 |
+| QUIET     | 重要消息 |
+| WARNING   | 警告消息 |
+| LIFECYCLE | 进度消息 |
+| INFO      | 信息消息 |
+| DEBUG     | 调试信息 |
+
+我们指定 -q 的日志级别并不是说输出重要信息，而是输出 QUIET 及其更高级别的日志信息，总结下就是：
+
+| 参数            | 说明                   |
+| --------------- | ---------------------- |
+| 无参            | LIFECYCLE 及其更高级别 |
+| -q 或者 --quiet | QUIET 及其更高级别     |
+| -i 或者 --info  | INFO 及其更高级别      |
+| -d 或者 --debug | DEBUG 及其更高级别     |
+
+我们在写 Gradle Plugin 是时候，验证是否执行成功是通过打印一句话来测试的：
+
+```groovy
+println 'Gralde Task 执行完毕～'
+```
+
+使用 print 系列方法，把日志信息输出到标准的控制台输出流，它被 Gradle 定向为 QUIET 级别日志，但是 Gradle 是有日志 API 的：
+
+```groovy
+logger.quiet("Quiet 信息")
+logger.error("Error 信息")
+logger.warn("Warn 信息")
+logger.lifecycle("Lifecycle 信息")
+logger.info('Info 信息')
+logger.debug("Debug 信息")
+```
+
+这里其实是调用的 Project 的 getLogger() 方法获取的 Logger 对象的实例。
+
+##### Groovy 基础
+
+这一小节我并不会介绍过多的 Groovy 基础知识，因为完全没必要，大家看文档就好了。这里只说一点，那就是方法的调用。
+
+```groovy
+//定义方法
+def show(int a, int b) {
+		println a + b
+}
+//调用方法的两种方式
+show(2, 3)
+show 2, 3
+```
+
+可以看到，方法的调用是可以省略括号的，return 也是可以不写的，默认为最后一行代码的执行作为输出。
+
+理解这一点是非常有用的，因为很多 build.gradle 脚本中的代码其实都是**方法调用**，比如 app module 的 build.gradle ：
+
+```groovy
+android {
+    compileSdkVersion 28
+    //...
+}
+```
+
+它实际上就是调用的是：
+
+```groovy
+public void compileSdkVersion(int apiLevel) {
+		compileSdkVersion("android-" + apiLevel);
+}
+```
+
+#### Gradle 构建脚本基础
+
+Gradle 构建脚本基础这一节，可以大致分为三块：Settings 和 Build 文件的作用，如何创建任务和配置任务依赖以及自定义属性的使用。
+
+##### Settings 和 Build 文件
+
+settings.gradle 用于初始化以及工程树的配置，放在根工程目录下。在 Gradle 中，多工程是通过工程树表示的，一个根工程是有很多子工程，一个子工程只有在 settings 文件里配置了 Gradle 才会识别，才会在构建的时候被包含进去：
+
+```groovy
+include ':app', ':crazy_plugin'
+```
+
+当然，还可以使用其他方式：
+
+```groovy
+include ':example'
+project(':example').projectDir = new File(rootDir,'/chapter/example')
+```
+
+我们可以为我们的子工程指定相应的目录，如果不指定，比如 app 和 crazy_plugin 子工程，默认目录就是其同级的目录。当然，我们也可以把工程放在任何目录下，可以非常灵活的对我们的工程进行分级、分类等，只要在 Settings 文件里面制定好路径就可以了。
+
+每个 Gradle 工程都会有一个 build.gradle 文件，该文件是该 Project 构建的入口，可以在这里针对该 Project 进行配置，比如配置版本，需要哪些插件，依赖哪些库等。
+
+既然每个 Project 都会有一个 build 文件，那么 root project 也不例外。root project 可以获取所有的 child project，所以可以在 root project 的 build 文件里对所有 child project 统一配置，比如应用的插件，依赖的 maven 中心库等。
+
+```groovy
+//应用于所有的工程
+allprojects {
+    repositories {
+        google()
+        jcenter()
+    }
+}
+//只应用于子工程
+subprojects {
+    apply plugin: 'java'
+    repositories {
+        google()
+        jcenter()
+    }
+}
+```
+
+以上，不要以为 allprojects 和 subprojects 只能配置，它们只是两个方法，接受一个闭包作为参数，对工程进行遍历，遍历的过程中调用我们自定义的闭包，所以我们可以在闭包里配置、打印、输出或者修改 Project 的属性都可以。
+
+##### 创建任务和任务依赖
+
+定义一个 Task 是很简单的，以下给出了两种方式：
+
+```groovy
+task myTask {
+    doLast {
+        println 'myTask Start~'
+    }
+}
+
+tasks.create('myTaskV2'){
+    doLast{
+        println 'myTaskV2 Start~'
+    }
+}
+```
+
+第一种方式中，task 看起来像一个关键字，其实它是 Project 对象的一个函数，原型为 create(String name,Closure configureClosure)，所以也就会有了第二种写法。
+
+任务之间是可以有依赖关系的，这样我们就可以控制哪些任务先于哪些任务执行；哪些任务执行后，其他任务才能执行。比如我们运行 jar 任务之前，compile 任务一定要执行过，也就是说 jar 依赖于 compile；
+
+我们改一下上面的代码，让 myTaskV2 依赖 myTask：
+
+```groovy
+task myTask {
+    doLast {
+        println 'myTask Start~'
+    }
+}
+
+task myTaskV2(dependsOn: myTask) {
+    doLast {
+        println 'myTaskV2 Start~'
+    }
+}
+```
+
+这样，当执行 myTaskV2 的时候会先执行 myTask 任务。一个 Task 也是可以依赖多个 Task 的。
+
+Project 在创建该任务的时候，同时把该任务对应的任务名注册为 Project 的一个熟悉，类型是 Task，这该如何理解呢，直接看代码：
+
+```java
+task myTask {
+    doLast {
+        println 'myTask Start~'
+    }
+}
+
+task myTaskV2(dependsOn: myTask) {
+    doLast {
+        println project.hasProperty('myTask')   //true
+        println project.hasProperty('myTask1')  //false
+        println 'myTaskV2 Start~'
+    }
+}
+```
+
+这也就说明了，每一个任务都是 Project 的一个属性。
+
+最后想说一点，定义完 Task，是可以直接执行的，但我们也可以控制 Task 的开关，默认是可执行的，我们也可以把它关掉：
+
+```groovy
+myTaskV2.enabled = false
+```
+
+##### 自定义属性
+
+相对简单，就不多说了：
+
+```groovy
+//定义一个自定义属性
+ext.nickname = 'Omooo'
+//定义多个自定义属性
+ext {
+    nicknameV2 = 'Omooo~'
+    age = 18
+}
+
+task myTaskV2() {
+    doLast {
+        println 'myTaskV2 Start~'
+        println "${nickname}"
+        println "${nickname}_${age}"
+    }
+}
+```
+
+#### Gradle 任务进阶
+
+上面，我们已经掌握了如何去定义一个简单的 Task，这一节主要讲解 Task 的进阶用法，包括任务分组和描述、任务执行分析以及任务的 OnlyIf 断言。
+
+##### 任务分组和描述
+
+这是一个非常实用的技巧，还记得我们之前输出所有的 tasks 时是按照分组输出的嘛，我们自定义的 Task 也是可以定义分组和描述的，这便于我们查找。定义分组和描述非常简单：
+
+```groovy
+task myTaskV2 {
+    group BasePlugin.BUILD_GROUP
+    description '自定义的 myTaskV2'
+    doLast {
+        println 'myTaskV2 Start~'
+    }
+}
+```
+
+当我们执行 ./gradlew tasks 时就可以看到了：
+
+```
+自定义的 Group tasks
+----------------
+myTaskV2 - 自定义的 myTaskV2
+```
+
+##### 任务执行分析
+
+我们知道，在 Task 中 doFirst 会首先执行，doLast 会最后执行，但有没有想过，内部是如何实现的呢？
+
+示例：
+
+```groovy
+Task task = task myTaskV2(type: CustomTask)
+task.doFirst {
+    println 'CustomTask do first'
+}
+
+task.doLast {
+    println 'CustomTask do last'
+}
+
+class CustomTask extends DefaultTask {
+
+    @TaskAction
+    def doSelf() {
+        println 'CustomTask do self'
+    }
+}
+```
+
+其实原理很简单的，当我们执行 Task 的时候，其实就是执行其拥有的 actions 列表，这个列表保存在 Task 对象实例中的 actions 成员变量中，其类型是一个 List：
+
+```groovy
+//AbstractTask 类中
+private List<ContextAwareTaskAction> actions = new ArrayList<ContextAwareTaskAction>(3)
+```
+
+当我们以 TaskAction 注解标注的方法会作为 Task 的执行实体，实际上会调用以下方法：
+
+```groovy
+    @Override
+    public void prependParallelSafeAction(final Action<? super Task> action) {
+        if (action == null) {
+            throw new InvalidUserDataException("Action must not be null!");
+        }
+        getTaskActions().add(0, wrap(action));
+    }
+```
+
+接着就是 doFirst 和 doLast 了：
+
+```groovy
+    @Override
+    public Task doFirst(final Closure action) {
+        hasCustomActions = true;
+        if (action == null) {
+            throw new InvalidUserDataException("Action must not be null!");
+        }
+        taskMutator.mutate("Task.doFirst(Closure)", new Runnable() {
+            public void run() {
+                getTaskActions().add(0, convertClosureToAction(action, "doFirst {} action"));
+            }
+        });
+        return this;
+    }
+    
+        @Override
+    public Task doLast(final Closure action) {
+        hasCustomActions = true;
+        if (action == null) {
+            throw new InvalidUserDataException("Action must not be null!");
+        }
+        taskMutator.mutate("Task.doLast(Closure)", new Runnable() {
+            public void run() {
+                getTaskActions().add(convertClosureToAction(action, "doLast {} action"));
+            }
+        });
+        return this;
+    }
+```
+
+doFirst 也是添加到第一个，那为什么不是 doSelf 在 doFirst 之前执行呢？实际上，这是因为 Task 的创建的时候就已经执行 doSelf 了，然后创建 Task 成功执行才会执行 doFirst，所以最终会把 doFirst 的闭包放在 actions 的第一位。
+
+##### 任务的 onlyIf 断言
+
