@@ -82,7 +82,7 @@ Activity 即用户界面。
 | singleTask     | 栈内复用，只要 Activity 在一个栈中存在，那么多次启动此 Activity 都不会重新创建实例，和 singleTop 一样，系统也会回调其 onNewIntent |
 | singleInstance | 单例模式，启动的 Activity 会创建一个新的任务栈并压入栈中，由于栈内复用的特性，后续的请求均不会创建新的 Activity，除非这个任务栈被系统销毁了 |
 
-在 singleTask 启动模式中，多次提到某个 Activity 所需的任务栈，什么是 Activity 所需要的任务栈呢？这就要从一个参数说起：taskAffinity，任务相关性。这个参数标识了一个 Activity 所需要的任务栈的名字，默认情况下，所有 Activity 所需的任务栈的名字为应用的包名。当然，我们可以为每个 Activity 都单独指定 taskAffinity 属性，这个属性值必须不能和包名相同，否则相当于没有设置。taskAffinity 属性主要和 singleTask 启动模式和 allowTaskReparentiong 属性配对使用，在其他情况下没有意义。
+在 singleTask 启动模式中，多次提到某个 Activity 所需的任务栈，什么是 Activity 所需要的任务栈呢？这就要从一个参数说起：taskAffinity，任务相关性。这个参数标识了一个 Activity 所需要的任务栈的名字，默认情况下，所有 Activity 所需的任务栈的名字为应用的包名。当然，我们可以为每个 Activity 都单独指定 taskAffinity 属性，这个属性值必须不能和包名相同，否则相当于没有设置。taskAffinity 属性主要和 singleTask 启动模式和 allowTaskReparenting 属性配对使用，在其他情况下没有意义。
 
 taskAffinity 与 singleTask 配对使用：
 
