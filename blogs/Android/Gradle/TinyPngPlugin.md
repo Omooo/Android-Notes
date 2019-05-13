@@ -155,7 +155,7 @@ class CrazyPlugin implements Plugin<Project> {
 回顾上一篇文章，我们说到，既然我们修改了 Plugin 的代码，就要重新生成 jar 包上传依赖，即执行：
 
 ```
-./gradlew task uploadArchives
+./gradlew uploadArchives
 ```
 
 然后在 app 模块的 build.gradle 文件里，我们就可以 apply Plugin 并且添加 Extensions 了：
@@ -183,7 +183,7 @@ tinyInfo {
 然后我们在执行：
 
 ```
-./gradlew task tinyTask
+./gradlew tinyTask
 ```
 
 就可以输出我们的自定义配置项了。也就是说，我们写的自定义配置项可以在 Task 中获取的。

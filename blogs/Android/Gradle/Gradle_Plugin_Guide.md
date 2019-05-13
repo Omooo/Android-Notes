@@ -38,10 +38,10 @@ apply plugin: MyPlugin
 在 Plugin 中我们定义了一个 hello 的 Task，然后 apply 这个 Plugin，现在我们可以打开 Terminal 执行这个 Task：
 
 ```
-./gradlew task -q hello
+./gradlew -q hello
 ```
 
-就输出 Hello Plugin~ 啦。这里 -q 参数表示静默执行，后面就是我们定义的 Task name，还是很简单的。
+就输出 Hello Plugin~ 啦。这里 -q 参数表示只输出重要信息的一种日志级别，后面就是我们定义的 Task name，还是很简单的。
 
 如果这个你还有问题，就不用往下看了 :)
 
@@ -163,7 +163,7 @@ top.omooo.my_plugin:my_plugin:1.0
 这时候我们我们还没有真正的发布，需要执行：
 
 ```java
-./gradlew task uploadArchives
+./gradlew uploadArchives
 ```
 
 执行完后，就可以看到我们根目录生成了一个 repo 文件夹，里面就是我们的插件 jar 包了：
@@ -221,7 +221,8 @@ apply plugin: 'top.omooo.my_plugin'
 之后，我们肯定会改 MyPlugin 里面的代码的，这时候就要重新上传依赖，用的还是那个命令：
 
 ```java
-./gradlew task uploadArchives
+./gradlew uploadArchives
 ```
 
 OK，大功告成～
+

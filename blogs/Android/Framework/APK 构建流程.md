@@ -4,9 +4,10 @@ Android APK 构建流程
 
 #### 目录
 
-2. 前言
-3. 构建流程
-4. Android Gradle Plugin 源码分析
+1. 前言
+2. 构建流程
+
+2. Android Gradle Plugin 源码分析
 
 #### 前言
 
@@ -18,7 +19,7 @@ Android APK 构建流程
 
 #### 构建流程
 
-先来一张 [Android 配置构建]() 官网上的一张图：
+先来一张 [Android 配置构建](https://developer.android.com/studio/build/index.html?hl=zh-cn#build-process) 官网上的一张图：
 
 ![](https://i.loli.net/2019/05/07/5cd1888bcfafa.png)
 
