@@ -54,17 +54,15 @@ Android Notes
 
 《Android Gradle 权威指南读书笔记》
 
-​		[基础知识相关](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Android%20Gradle%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0%E4%B9%8B%E4%B8%80.md)
+- [基础知识相关](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Android%20Gradle%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0%E4%B9%8B%E4%B8%80.md)
+- [进阶知识相关](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Android%20Gradle%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0%E4%B9%8B%E4%BA%8C.md)
 
 ##### JVM、ART 相关
 
-Class 文件格式
-
-​			[Class 文件格式总览](https://github.com/Omooo/Android-Notes/blob/master/blogs/JVM/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3%20Class%20%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F/Class%20%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F%E6%80%BB%E8%A7%88.md)
-
-​			[常量池及相关内容](https://github.com/Omooo/Android-Notes/blob/master/blogs/JVM/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3%20Class%20%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F/%E5%B8%B8%E9%87%8F%E6%B1%A0%E5%8F%8A%E7%9B%B8%E5%85%B3%E5%86%85%E5%AE%B9.md)
-
-​			[属性介绍]
+- Class 文件格式
+  - [Class 文件格式总览](https://github.com/Omooo/Android-Notes/blob/master/blogs/JVM/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3%20Class%20%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F/Class%20%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F%E6%80%BB%E8%A7%88.md)
+  - [常量池及相关内容](https://github.com/Omooo/Android-Notes/blob/master/blogs/JVM/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3%20Class%20%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F/%E5%B8%B8%E9%87%8F%E6%B1%A0%E5%8F%8A%E7%9B%B8%E5%85%B3%E5%86%85%E5%AE%B9.md)
+  - [属性介绍]
 
 ##### 性能优化
 
