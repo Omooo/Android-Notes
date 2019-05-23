@@ -4,9 +4,18 @@
 
 #### 目录
 
-1. 前言
-2. 实例分析之 MediaScanner
-3. Java 层的 MediaScanner
+1. 思维导图
+2. 前言
+3. 实例分析之 MediaScanner
+4. Java 层的 MediaScanner
+5. JNI 层 MediaScanner
+   - JNI 函数注册
+   - 垃圾回收
+   - JNI 中的异常处理
+
+#### 思维导图
+
+![](https://i.loli.net/2019/05/23/5ce61fe19639165339.png)
 
 #### 前言
 
@@ -52,7 +61,7 @@ public class MediaScanner implements AutoCloseable {
 
 但是在 JNI 层，要完成的任务可没那么轻松了。
 
-#### JNI 层 MeidaScanner
+#### JNI 层 MediaScanner
 
 看下 android.media.MediaScanner.cpp 源码：
 
@@ -76,6 +85,8 @@ android_media_MediaScanner_processFile(
 
 Java 层，native_init 函数位于 android.media 包中，它的全路径名应该是 android.media.MediaScanner.native_init，而 JNI 层函数的名字就是把 "." 替换成了 "_"，通过这样，就可以把 Java 中的 Native 函数和 JNI 层的函数关联起来了。
 
+##### JNI 函数注册
+
 其实上面说的就是 JNI 函数的注册问题。注册，即将 Java 层的 native 函数和 JNI 层对应的实现函数关联起来。JNI 函数的注册方法实际上有以下两种：
 
 1. 静态注册
@@ -90,6 +101,134 @@ Java 层，native_init 函数位于 android.media 包中，它的全路径名应
 
 2. 动态注册
 
-    Java native 函数和 JNI 函数是一一对应的，在 JNI 中，用一个叫 JNINativeMethod 的结构来保存这种关联关系。
+    Java native 函数和 JNI 函数是一一对应的，在 JNI 中，用一个叫 JNINativeMethod 的结构来保存这种关联关系。定义如下：
+    
+    ```c
+    typedef struct {
+    	//Java 中 native 函数的名字，不用携带包的路径，例如 "native_init"
+    	const char* name;
+    	//Java 函数的签名信息，用字符串表示，是参数类型和返回值类型的组合
+      //因为 Java 支持函数重载，所以通过 name 和 signature 可确定唯一
+    	const char* signature;
+    	//JNI 层对应函数的函数指针，注意它是 void* 类型
+    	void* fnPtr;
+    }JNINativeMethod;
+    ```
+    
+    然后看下 MediaScanner JNI 层是如何做的？
+    
+    ```c
+    static const JNINativeMethod gMethods[] = {
+    
+        {
+            "processFile",
+            "(Ljava/lang/String;Ljava/lang/String;Landroid/media/MediaScannerClient;)Z",
+            (void *)android_media_MediaScanner_processFile
+        },
+    		//...
+        {
+            "native_init",
+            "()V",
+            (void *)android_media_MediaScanner_native_init
+        }
+    };
+    //注册 JNINativeMethod 数组
+    // This function only registers the native methods, and is called from
+    // JNI_OnLoad in android_media_MediaPlayer.cpp
+    int register_android_media_MediaScanner(JNIEnv *env)
+    {
+        return AndroidRuntime::registerNativeMethods(env,
+                    kClassMediaScanner, gMethods, NELEM(gMethods));
+    }
+    ```
+    
+    AndroidRunTime 类提供了一个 registerNativeMethods 函数来完成注册工作，其实现为：
+    
+    ```c
+    //AndroidRunTime.cpp
+    /*static*/ int AndroidRuntime::registerNativeMethods(JNIEnv* env,
+        const char* className, const JNINativeMethod* gMethods, int numMethods)
+    {
+        return jniRegisterNativeMethods(env, className, gMethods, numMethods);
+    }
+    ```
+    
+    其中 jniRegisterNativeMethods 是 Android 平台中为了方便 JNI 使用而提供的一个帮助函数，代码为：
+    
+    ```c
+    //JNIHelp.c
+    MODULE_API int jniRegisterNativeMethods(C_JNIEnv* env, const char* className,
+        const JNINativeMethod* gMethods, int numMethods)
+    {
+        JNIEnv* e = reinterpret_cast<JNIEnv*>(env);
+    
+      	//因为 JNINativeMethod 使用的函数名并非路径名，所以要先指明是哪个类
+        scoped_local_ref<jclass> c(env, findClass(env, className));
+       
+      	//实际上调用 JNIEnv 的 RegisterNatives 函数完成注册
+        int result = e->RegisterNatives(c.get(), gMethods, numMethods);
+    
+        return 0;
+    }
+    ```
+    
+    以上，在自己的 JNI 层代码中使用这种方法，就可以完成动态注册了。那么这些动态注册的函数在什么时候在上面地方被调用的呢？
+    
+    当 Java 层通过 System.loadLibrary 加载完 JNI 动态库后，紧接着会查找该库中一个叫 JNI_OnLoad 的函数。如果有，就调用它，而动态注册的工作就是在这里完成的。
+    
+    所以，如果想使用动态注册方法，就必须实现 JNI_OnLoad 函数，只有在这个函数中才有机会完成动态注册的工作。
+    
+    ```c
+    //android_media_MediaPlayer.cpp
+    jint JNI_OnLoad(JavaVM* vm, void* /* reserved */)
+    {
+        JNIEnv* env = NULL;
+        jint result = -1;
+    
+        if (vm->GetEnv((void**) &env, JNI_VERSION_1_4) != JNI_OK) {
+            goto bail;
+        }
+        assert(env != NULL);
+    
+      	//动态注册 MediaScanner 的 JNI 函数
+        if (register_android_media_MediaScanner(env) < 0) {
+            goto bail;
+        }
+      
+      	//...
+    
+        /* success -- return valid version number */
+        result = JNI_VERSION_1_4;
+    
+    bail:
+        return result;
+    }
+    ```
 
-   
+##### 垃圾回收
+
+Java 中创建的对象最后是由垃圾回收器来回收和释放内存的，如果 Java 层的对象被回收了，那么肯定会影响 JNI 层。JNI 技术一共提供了三种类型的引用，它们分别是：
+
+- Local Reference 本地引用
+
+  在 JNI 层函数中使用的非全局引用对象都是 Local Reference，它包括函数调用时传入的 jobject 和在 JNI 层函数中创建的 jobject。Local Reference 最大的特点就是，一旦 JNI 层函数返回，这些 jobject 就可能被垃圾回收。
+
+- Glabal Reference 全局引用
+
+  这种对象如不主动释放，它永远不会被垃圾回收。
+
+- Weak Global Reference 弱全局引用
+
+  一种特殊的 Global Reference，在运行过程中可能会被垃圾回收。所以使用它之前，需要调用 JNIEnv 的 isSameObject 判断它是否被回收了。
+
+所以每当 JNI 层想要保存 Java 层中的某个对象时，就可以使用 Global Reference，使用完后记住释放它就可以了。
+
+##### JNI 中的异常处理
+
+JNI 中也有异常，不过它和 C++、Java 的异常不太一样。如果调用 JNIEnv 的某些函数出错了，则会产生一个异常，但这个异常不会中断本地函数的执行，直到从 JNI 层返回到 Java 层后，虚拟机才会抛出这个异常。虽然在 JNI 层中产生的异常不会中断本地函数的运行，但一旦产生异常后，就只能做一些资源清理工作了（例如释放全局引用，或者 ReleaseStringChars）。如果这时调用除上面所说函数之外的其他 JNIEnv 函数，则会导致程序死掉。
+
+JNI 层函数可以在代码中截获和修改这些异常，JNIEnv 提供了三个函数给予帮助：
+
+1. ExceptionOccured 函数，用来判断是否发生异常
+2. ExceptionClear 函数，用来清理当前 JNI 层中发生的异常
+3. ThrowNew 函数，用来向 Java 层抛出异常

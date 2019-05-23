@@ -92,6 +92,10 @@ Android Notes
 
 [Android 系统启动](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Framework/Android%20%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8.md)
 
+《深入理解 Android 卷一》
+
+- [深入理解 JNI](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Framework/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3%20Android%20%E5%8D%B7%E4%B8%80/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3%20JNI.md)
+
 #### Java 基础
 
 [final 你需要知道的一切](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/final.md)
