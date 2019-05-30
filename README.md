@@ -172,6 +172,8 @@ Android Notes
 
 [Http 和 Https](https://github.com/Omooo/Android-Notes/blob/master/blogs/computer_network/Http%20%E4%B8%8E%20Https.md)
 
+[HTTP 的前世今生]
+
 #### 笔试
 
 [央视电影网 --- Mr.S 大佬](https://github.com/Omooo/Android-Notes/tree/master/blogs/Android/%E7%AC%94%E8%AF%95%E9%A2%98/%E5%A4%AE%E8%A7%86%E7%94%B5%E5%BD%B1%E7%BD%91%20---%20Mr.S%20%E5%A4%A7%E4%BD%AC.md)
