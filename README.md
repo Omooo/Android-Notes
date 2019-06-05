@@ -172,7 +172,11 @@ Android Notes
 
 [Http 和 Https](https://github.com/Omooo/Android-Notes/blob/master/blogs/computer_network/Http%20%E4%B8%8E%20Https.md)
 
-[HTTP 的前世今生]
+[HTTP 的前世今生](https://github.com/Omooo/Android-Notes/blob/master/blogs/computer_network/HTTP%20%E7%9A%84%E5%89%8D%E4%B8%96%E4%BB%8A%E7%94%9F.md)
+
+[HTTP/1.1](https://github.com/Omooo/Android-Notes/blob/master/blogs/computer_network/HTTP 1.1.md)
+
+[HTTP/2.0](https://github.com/Omooo/Android-Notes/blob/master/blogs/computer_network/HTTP 2.0.md)
 
 #### 笔试
 
