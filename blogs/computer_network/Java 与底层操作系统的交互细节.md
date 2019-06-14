@@ -151,5 +151,214 @@ JVM 通过类加载器加载 class 文件里的字节码后，会通过解释器
 
 ![](https://i.loli.net/2019/06/11/5cff656d9a7dc33822.png)
 
-在 Java 中，我们使用 MappedByteBuffer 来实现内存映射。这是一个堆外内存，在映射完之后，并没有立即占有物理内存，而是访问数据页的时候，先查页表，发现还没加载，发起缺页异常，然后在从磁盘将数据加载进内存。
+在 Java 中，我们使用 MappedByteBuffer 来实现内存映射。这是一个堆外内存，在映射完之后，并没有立即占有物理内存，而是访问数据页的时候，先查页表，发现还没加载，发起缺页异常，然后在从磁盘将数据加载进内存。所以一些对实时性要求很高的中间件，例如 RocketMQ，消息存储在一个大小为 1G 的文件中，为了加快读写速度，会将这个文件映射到内存后，在每个页写一比特数据，这样就可以把整个 1G 文件都加载进内存，在实际读写的时候就不会发生缺页了，这个在 RocketMQ 内部叫做文件预热。
 
+##### JVM 中对象的内存布局
+
+在 Linux 中只有知道一个变量的起始地址就可以读出这个变量的值，因为从这个起始地址起前 8 位记录了变量的大小，也就是可以定位到结束地址，在 Java 中我们可以通过 Field.get(Object) 的方式获取变量的值，也就是反射，最终是通过 UnSafe 类来实现的。
+
+我们可以分析下具体代码：
+
+```java
+		//Field 对象的 getInt方法  先安全检查 ，然后调用 FieldAccessor
+    @CallerSensitive
+    public int getInt(Object obj)
+        throws IllegalArgumentException， IllegalAccessException
+    {
+        if (!override) {
+            if (!Reflection.quickCheckMemberAccess(clazz， modifiers)) {
+                Class<?> caller = Reflection.getCallerClass();
+                checkAccess(caller， clazz， obj， modifiers);
+            }
+        }
+        return getFieldAccessor(obj).getInt(obj);
+    }
+
+
+ 		//获取field在所在对象中的地址的偏移量 fieldoffset
+    UnsafeFieldAccessorImpl(Field var1) {
+            this.field = var1;
+            if(Modifier.isStatic(var1.getModifiers())) {
+                this.fieldOffset = unsafe.staticFieldOffset(var1);
+            } else {
+                this.fieldOffset = unsafe.objectFieldOffset(var1);
+            }
+
+            this.isFinal = Modifier.isFinal(var1.getModifiers());
+     }
+
+
+ 		//UnsafeStaticIntegerFieldAccessorImpl 调用unsafe中的方法
+     public int getInt(Object var1) throws IllegalArgumentException {
+          return unsafe.getInt(this.base， this.fieldOffset);
+     }
+```
+
+通过上面的代码我们可以通过属性相对对象起始地址的偏移量，来读取和写入属性的值。这也是 Java 反射的原理，这种模式在 JDK 中很多场景都有用到，例如 LockSupport.park 中设置阻塞对象。那么属性的偏移量具体根据什么规则来确定的呢？下面我们借此机会分析下 Java 对象的内存布局。
+
+在 Java 虚拟机中，每个 Java 对象都有一个对象头（object header），由标记字段和类型指针构成。标记字段用来存储对象的哈希码、GC 信息、持有的锁信息，而类型指针指向该对象的类 Class。在 64 位操作系统中，标记字段占有 64 位，而类型指针也占 64 位，也就是说一个 Java 对象在什么属性都没有的情况下要占有 16 字节的空间。
+
+当前 JVM 中默认开启了压缩指针，这样类型指针可以只占 32 位，所以对象头占 12 字节，压缩指针可以作用于对象头，以及引用类型的字段。JVM 为了内存对齐，会对字段进行重排序 — 这里的对齐主要指 Java 虚拟机堆中的对象的起始地址为 8 的倍数，如果一个对象用不到 8N 个字节，那么剩下的就会被填充，另外子类继承的属性的偏移量和父类一致。
+
+以 Long 为例，他只有一个非 static 属性 value，而尽管对象头只占有 12 字节，而属性 value 的偏移量只能是 16，其中 4 字节只能浪费掉，所以字段重排就是为了避免内存浪费，所以我们很难在 Java 字节码被加载之前分析出这个 Java 对象占有的实际空间有多大，我们只能通过递归父类的所有属性来预估对象大小，而真实占用的大小可以通过 Java agent 中的 Instrumentation 获取。
+
+当前内存对齐另外一个原因是为了让字段只出现在同一个 CPU 的缓存行中，如果字段不对齐，就有可能出现一个字段的一部分在缓存行 1 中，而剩下的一半在缓存行 2 中，这样该字段的读取需要替换两个缓存行，而字段的写入会导致两个缓存行上缓存的其他数据无效，这样会影响程序性能。
+
+通过内存对齐可以避免一个字段同时存在两个缓存行里的情况，但还是无法完全规避缓存伪共享的问题，也就是一个缓存行中存了多个变量，而这几个变量在多核 CPU 并行的时候，会导致竞争缓存行的写权限。当其中一个 CPU 写入数据后，这个字段对应的缓存行将失效，导致这个缓存行的其他字段也失效。
+
+在 Disruptor 中，通过填充几个无意义的字段，让对象的大小刚好早 64 字节，一个缓存行的大小为 64 字节，这样这个缓存行就只会给这一个变量使用，从而避免缓存行伪共享。但是在 JDK 7 中，由于无效字段被清除导致该方法失效，只能通过继承父类字段来避免填充字段被优化，而 JDK 8 提供了注解 @Contended 来标示这个变量或对象将独享一个缓存行，使用这个注解必须在 JVM 启动的时候加上 -XX:-RestrictContended 参数，其实也是用空间换取时间。
+
+```java
+jdk6  --- 32 位系统下
+    public final static class VolatileLong
+    {
+        public volatile long value = 0L;
+        public long p1， p2， p3， p4， p5， p6; // 填充字段
+    }
+
+jdk7 通过继承
+
+   public class VolatileLongPadding {
+       public volatile long p1， p2， p3， p4， p5， p6; // 填充字段
+   }
+   public class VolatileLong extends VolatileLongPadding {
+       public volatile long value = 0L;
+   }
+
+jdk8 通过注解
+
+   @Contended
+   public class VolatileLong {
+       public volatile long value = 0L;
+   }
+```
+
+#### NPTL 和 Java 的线程模型
+
+按照教科书的定义，进程是资源管理的最小单位，而线程是 CPU 调度执行的最小单位，线程的出现是为了减少进程的上下文切换（线程的上下文切换比进程小很多），以及更好适配多核心 CPU 环境。
+
+例如一个进程下多个线程可以分别在不同的 CPU 上执行，而多进程的支持，既可以放在 Linux 内核实现，也可以在核外实现。如果放在核外，只需要完成运行栈的切换，调度开销小，但是这种方式无法适应多 CPU 环境，底层的进程还是运行在一个 CPU 上。另外由于对用户编程要求高，所以目前主流的操作系统都是在内核支持线程。
+
+而在 Linux 中，线程是一个轻量级进程，只是优化了线程调度的开销。而在 JVM 中的线程和内核线程是一一对应的，线程的调度完全交给了内核，当调用 Thread.run 的时候，就会通过系统调用 fork() 创建一个内核线程，这个方法会在用户态和内核态之间进行切换，性能没有在用户态实现线程高，当然由于直接使用内核线程，所以能够创建的最大线程数也受内核控制。目前 Linux 上的线程模型为 NPTL（Native POSIX Thread Library），它使用一对一模式，兼容 POSIX 标准，没有使用管理线程，可以更好的在多核 CPU 上运行。
+
+##### 线程的状态
+
+对进程而言，就三种状态 — 就绪、运行、阻塞，而在 JVM 中，阻塞有四种类型，我们可以通过 jstack 生成 dump 文件查看线程的状态。
+
+- BLOCKED（on object monitor）通过 synchronized(obj) 同步块获取锁的时候，等待其他线程释放对象锁，dump 文件会显示 waiting to lock <0x00000000e1c9f108>。
+- TIMED WAITING（on object monitor）和 WAITING（on object monitor）在获取锁后，调用了 object.wait() 等待其他线程调用 object.notify()，两者区别是是否带超时时间。
+- TIMED WAITING（sleeping）程序调用了 thread.sleep()，这里如果 sleep(0) 不会进入阻塞状态，会直接从运行转换为就绪。
+- TIMED WAITING（parking）和 WAITING（parking）程序调用了 Unsafe.park()，线程被挂起，等待某个条件发生，waiting on condition。
+
+而在 POSIX 标准中，thread_block 接受一个参数 stat，这个参数也有三种类型，TASK_BLOCKED、TASK_WAITING、TASK_HANGING，而调度器只会对线程状态为 READY 的线程执行调度。另外一点是线程的阻塞是线程自己操作的，相当于是线程主动让出 CPU 时间片。所以等线程被唤醒后，他的剩余时间片不会变，该线程只能在剩下的时间片运行，如果该时间片到期后线程还没结束，该线程状态会由 RUNNING 转换为 READY，等待调度器的下一次调度。
+
+好了，关于线程就分析到这。关于 Java 并发包，核心都在 AQS 里，底层是通过 UnSafe 类的 cas 方法，以及 park 方法实现。后面我们在找时间单独分析，现在我们看看 Linux 的进程同步方案。
+
+> POSIX 表示可移植操作系统接口（Portable Operating System Interface of UNIX，缩写为 POSIX），POSIX 标准定义了操作系统应该为应用程序提供的接口标准。
+>
+> CAS 操作需要 CPU 支持，将比较和交换作为一条指令来执行，CAS 一般有三个参数，内存位置、预期原值、新值，所以 UnSafe 类中的 compareAndSwap 用属性相对对象初始地址的偏移量，来定位内存位置。
+
+##### 线程的同步
+
+线程同步出现的根本原因是访问公共资源需要多个操作，而这多个操作的执行过程不具备原子性，被任务调度器分开了，而其他线程会破坏共享资源，所以需要在临界区做线程的同步。这里我们先明确一个概念，就是临界区，它是指多个任务访问共享资源如内存或文件时候的指令，是指令并不是受访问的资源。
+
+POSIX 定义了五种同步对象，互斥锁、条件变量、自旋锁、读写锁、信号量，这些对象在 JVM 中也都有对应的实现，并没有全部使用 POSIX 定义的 API，通过 Java 实现灵活性更高，也避免了调用 native 方法的性能开销。当然底层最终都依赖于 pthread 的互斥锁 mutex 来实现。这是一个系统调用，开销很大，所以 JVM 对锁做了自动升降级。基于 AQS 的实现以后再分析，这里主要说一下关键字 synchronized。
+
+当声明 synchronized 的代码块时，编译而成的字节码会包含一个 monitorenter 和多个 monitorexit（多个退出路径，正常和异常情况）。当执行 monitorenter 的时候会检查目标锁对象的计数器是否为 0，如果为 0 则将锁对象的持有线程设置为自己，然后计数器加 1，获取到锁；如果不为 0 则检查锁对象的持有线程是不是自己，如果是自己就将计数器加 1 获取锁，如果不是则阻塞等待，退出的时候计数器减 1，当减为 0 的时候清楚锁对象的持有线程标记。可以看出 synchronized 是支持可重入的。
+
+刚刚说到线程的阻塞是一个系统调用，开销大，所以 JVM 设计了自适应自旋锁。就是当没有获取到锁的时候，CPU 会进入自旋状态等待其他线程释放锁，自旋的时候主要看上次等待多长时间获取的锁。例如上次自旋 5 毫秒没有获取锁，这次就 6 毫秒。自旋会导致 CPU 空跑，另外一个副作用就是不公平的锁机制，因为该线程自旋获取到锁，而其他正在阻塞的线程还在等待。
+
+除了自旋锁，JVM 还通过 CAS 实现了轻量级锁和偏向锁来分别针对多个线程在不同时间访问锁和锁仅会被一个线程使用的情况。后两种锁相当于没有调用底层的信号量实现（通过信号量来控制线程 A 释放了锁例如调用了 wait()，而线程 B 就可以获取锁，这个只有内核才能实现，后面两种由于场景里没有竞争所以也就不需要通过底层信号量控制），只是自己在用户空间维护了锁的持有关系，所以更高效。
+
+![](https://i.loli.net/2019/06/13/5d01aec67976230364.png)
+
+如上图所示，如果线程进入 monitorenter 会将自己放入该 objectmonitor 的 entryset 队列，然后阻塞，如果当前持有线程调用了 wait 方法，将会释放锁，然后将自己封装成 objectwaiter 放入 objectmonitor 的 waitset 队列，这时候 entryset 队列里的某个线程将会竞争到锁，并进入 active 状态，如果这个线程调用了 notify 方法，将会把 waitset 的第一个 objectwaiter 拿出来放入 entryset （这个时候根据策略可能会先自旋），当调用 notify 的那个线程执行 monitorexit 释放锁的时候，entryset 里的线程就开始竞争锁后进入 active 状态。
+
+为了让应用程序免于数据竞争的干扰，Java 内存模型中定义了 happen-before 来描述两个操作的内存可见效，也就是 X 操作 happen-before 操作 Y，那么 X 操作结果对 Y 可见。JVM 中针对 volatile 以及锁的实现有 happen-before 规则，JVM 底层通过插入内存屏障来限制编译器的重排序。
+
+以 volatile 为例，内存屏障将不允许在 volatile 字段写操作之间的语句被重排序到写操作后面，也不允许读取 volatile 字段之后的语句被重排序带读取语句之前。插入内存屏障的指令，会根据指令类型不同有不同的效果。例如在 monitorexit 释放锁后会强制刷新缓存，而 volatile 对应的内存屏障会在每次写入后强制刷新到主存，并且由于 volatile 字段的特性，编译器无法将其分配到寄存器，所以每次都是从主存读取，所以 volatile 适用于读多写少的场景，最好只有个线程写多个线程读，如果频繁写入导致不停刷新缓存会影响性能。
+
+关于应用程序中设置多少线程数合适的问题，我们一般的做法是，设置 CPU 最大核心数 *2，我们编码的时候可能不确定运行在什么样的硬件环境中，可以通过 Runtime.getRuntime().availableProcessors() 获取 CPU 核心。
+
+但是具体设置多少线程数，主要和线程内运行的任务中的阻塞时间有关系。如果任务中全部是计算密集型，那么只需要设置 CPU 和核心数的线程就可以达到 CPU 利用率最高。如果设置的太大，反而因为线程上下文切换影响性能，如果任务中有阻塞操作，而在阻塞的时间就可以让 CPU 去执行其他线程里的任务，我们可以通过线程数量 = 内核数量 / (1 - 阻塞率) 这个公式去计算最合适的线程数，阻塞率我们可以通过计算任务的总的执行时间和阻塞的时间获得。目前微服务架构下有大量的 RPC 调用，所以利用多线程可以大大提高执行效率，我们可以借助分布式链路监控来统计 RPC 调用所消耗的时间，而这部分时间就是任务中阻塞的时间，当然为了做到极致的效率最大，我们需要设置不同的值然后进行测试。
+
+#### Java 中如何实现定时任务
+
+定时器已经是现代软件中不可缺少的一部分，例如每隔 5 秒去查询一下状态、是否有新邮件、实现一个闹钟等，Java 中已经有现成的 API 供使用。但是如果你想设计的更高效、更精准的定时器任务，就需要了解底层的硬件知识。比如实现一个分布式任务调度中间件，你可能要考虑到各个应用间时钟同步的问题。
+
+Java 中我们要实现定时任务，有两种方式，一种通过 Timer 类，另外一种是 JUC 中的 ScheduledExecutorService。
+
+不知道大家有没有好奇 JVM 是如何实现定时任务的，难道一直轮询时间，看是否时间到了，如果到了就调用对应的处理任务。但是这种一直轮询不释放 CPU 肯定是不可取的，要么就是线程阻塞，等到时间到了在唤醒线程。那么 JVM 怎么知道时间到了，如何唤醒呢？
+
+首先我们翻一下 JDK，发现和时间相关的 API 大概有 3 处，而且这 3 处还都对时间的精度做了区分。
+
+Object.wait(long millisecond) 参数是毫秒，必须大于等于 0，如果等于 0，就一直阻塞直到其他线程来唤醒，Timer 类就是通过 wait() 方法来实现。下面我们看一下 wait 的另外一个方法：
+
+```java
+public final void wait(long timeout， int nanos) throws InterruptedException {
+         if (timeout < 0) {
+             throw new IllegalArgumentException("timeout value is negative");
+         }
+         if (nanos < 0 || nanos > 999999) {
+             throw new IllegalArgumentException(
+                                 "nanosecond timeout value out of range");
+         }
+         if (nanos > 0) {
+             timeout++;
+         }
+         wait(timeout);
+}
+```
+
+这个方法是想提供一个可以支持纳秒级的超时时间，然后只是粗暴的加 1 毫秒。
+
+Thread.sleep(long millisecond) 目前一般通过这种方式释放 CPU，如果参数为 0，表示释放 CPU 给更高优先级的线程，自己从运行状态转换为可运行状态等待 CPU 调度，它也提供了一个可以支持纳秒级的方法实现，跟 wait 的区别是它通过 500000 来分隔是否要加 1 毫秒。
+
+```java
+public static void sleep(long millis， int nanos)
+     throws InterruptedException {
+         if (millis < 0) {
+             throw new IllegalArgumentException("timeout value is negative");
+         }
+         if (nanos < 0 || nanos > 999999) {
+             throw new IllegalArgumentException(
+                                 "nanosecond timeout value out of range");
+         }
+         if (nanos >= 500000 || (nanos != 0 && millis == 0)) {
+             millis++;
+         }
+         sleep(millis);
+}
+```
+
+LockSupport.park(long nans) Condition.await() 调用的该方法，ScheduleExecutorService 用的 condition.await() 来实现阻塞一定的超时时间，其他带超时参数的方法也都通过它来实现，目前大多定时器都是通过这个方法来实现的，该方法也提供了一个布尔值来确定时间的精度。
+
+System.currentTimeMillis() 以及 System.nanoTime() 这两种方式都依赖于底层操作系统，前者是毫秒级，经测试 Windows 平台的频率可能超过 10ms，而后者是纳秒级别，频率在 100ns 左右，所以如果要获取更精准的时间建议使用后者。
+
+好了，API 了解完了，我们看下定时器的底层是怎么实现的。
+
+现代 PC 机中有三种硬件时钟的实现，它们都是通过晶体振动产生的方波信号输入来完成时针信号同步的。
+
+- 实时时钟 RTC，用来长时间存放系统时间的设备，即使关机也可以依靠主板中的电池继续计时。Linux 启动的时候会从 RTC 中读取时间和日期作为初始值，之后在运行期间通过其他计时器去维护系统时间。
+- 可编程间隔定时器 PIT，该计数器会有一个初始值，没过一个时钟周期，该初始值会减 1，当该初始值被减到 0 时，就通过导线向 CPU 发送一个时钟中断，CPU 就可以执行对应的中断程序，也就是回调对应的任务。
+- 时间戳计数器 TSC，所有的 Intel8086 CPU 中都包含一个时间戳计数器对应的寄存器，该寄存器的值会在每次 CPU 收到一个时钟周期的中断信号后就会加 1.它比 PIT 精度高，但是不能编程，只能读取。
+
+> 时钟周期：硬件计时器在多长时间内产生时钟脉冲，而时钟周期频率为 1 秒内产生时钟秒钟的个数。目前通常为 1193180。
+>
+> 时钟滴答：当 PIT 中的初始值减到 0 的时候，就会产生一次时钟中断，这个初始化由编程的时候指定。
+
+Linux 启动的时候，先通过 RTC 获取初始时间，之后内核通过 PIT 中的定时器的时钟滴答来维护日期，并且会定时将该日期写入 RTC。而应用程序的定时器主要是通过设置 PIT 的初始值设置的，当初始值减到 0 的时候，就表示要执行回调函数了。
+
+这里大家会不会有疑问，这样同一时刻只能有一个定时器程序了，而我们在应用程序中，以及多个应用程序之间，肯定有很多定时器任务。其实我们可以参考 ScheduledExecutorService 的实现，只需要将这些定时任务按照时间做一个排序，越靠前待执行的任务放在前面。第一个任务到了在设置第二个任务相对当前时间的值，毕竟 CPU 同一时刻也只能运行一个任务。
+
+关于时间的精度问题，我们无法在软件层面做的完全精准，毕竟 CPU 的调度不完全受用户程序控制，当然更大的依赖是硬件的时钟周期频率，目前 TSC 可以提供更高的精度。
+
+现在我们知道了，Java 中的超时时间，是通过可编程间隔定时器设置一个初始值然后等待中断信号实现的。精度上受硬件时钟周期的影响，一般为毫秒级别，毕竟 1 纳秒光速也只有 3 米，所以 JDK 中带纳秒参数的实现都是粗暴做法，预留着等待精度更高的定时器出现。而获取当前时间 System.currentTimeMillis() 效率会更高，但它是毫秒级精度，它读取的 Linux 内核维护的日期。而 System.nanoTime() 会优先使用 TSC，性能稍微低一点，但它是纳秒级，Random 类为了防止冲突就用 nanoTime 生成种子。
+
+#### Java 如何和外部设备通信
+
+计算机的外部设备有鼠标、键盘、打印机、网卡等，通常我们将外部设备和和主存之间的信息传递为 I/O 操作，按操作特性可以分为：输出型设备、输入型设备、存储设备。
+
+现代设备都采用通道方式和主存进行交互，通道是一个专门用来处理 I/O 任务的设备，CPU 在处理主程序时遇到 I/O 请求，启动指定通道上选址的设备，一旦启动成功，通道开始控制设备进行操作，而 CPU 可以继续执行其他任务。I/O 操作完成后，通道发出 I/O 操作结束的中断，处理器转而处理 I/O 结束后的事件。
+
+其他处理 I/O 的方式，例如轮询、中断、DMA，在性能上都不见通道，这里就不介绍了。当前 Java 程序和外部设备通信也是通过系统调用完成，这里就不再继续深入了。
