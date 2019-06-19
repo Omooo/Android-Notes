@@ -86,7 +86,9 @@ Android Notes
 
 #### 操作系统
 
-[Linux 综述]
+[操作系统学习路径](https://github.com/Omooo/Android-Notes/blob/master/blogs/operate_system/%E5%AD%A6%E4%B9%A0%E8%B7%AF%E5%BE%84.md)
+
+[Linux 综述](https://github.com/Omooo/Android-Notes/blob/master/blogs/operate_system/Linux%20%E7%BB%BC%E8%BF%B0.md)
 
 #### Framework
 
@@ -94,9 +96,16 @@ Android Notes
 
 [Android 系统启动](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Framework/Android%20%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8.md)
 
+[应用程序进程启动过程](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Framework/%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E8%BF%9B%E7%A8%8B%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B.md)
+
+[Android APK 构建流程](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Framework/APK%20%E6%9E%84%E5%BB%BA%E6%B5%81%E7%A8%8B.md)
+
+[Android 签名校验机制 v1、v2、v3](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Framework/Android%20%E7%AD%BE%E5%90%8D%E6%A0%A1%E9%AA%8C%E6%9C%BA%E5%88%B6.md)
+
 《深入理解 Android 卷一》
 
 - [深入理解 JNI](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Framework/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3%20Android%20%E5%8D%B7%E4%B8%80/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3%20JNI.md)
+- [深入理解 init](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Framework/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3%20Android%20%E5%8D%B7%E4%B8%80/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3%20init.md)
 
 #### Java 基础
 
@@ -187,3 +196,9 @@ Android Notes
 #### 笔试
 
 [央视电影网 --- Mr.S 大佬](https://github.com/Omooo/Android-Notes/tree/master/blogs/Android/%E7%AC%94%E8%AF%95%E9%A2%98/%E5%A4%AE%E8%A7%86%E7%94%B5%E5%BD%B1%E7%BD%91%20---%20Mr.S%20%E5%A4%A7%E4%BD%AC.md)
+
+#### 常见面试题精讲
+
+[面试题集](https://github.com/Omooo/Android-Notes/blob/master/blogs/Interview/%E9%9D%A2%E8%AF%95%E9%A2%98%E9%9B%86.md)
+
+- [Get 和 Post 请求的区别？](https://github.com/Omooo/Android-Notes/blob/master/blogs/Interview/Get%20%E5%92%8C%20Post%20%E7%9A%84%E5%8C%BA%E5%88%AB.md)
