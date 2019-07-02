@@ -45,6 +45,7 @@ Android Notes
 15. [HandlerThread 源码分析](<https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/HandlerThread.md>)
 16. [IntentService 源码分析](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/IntentService.md)
 17. [View 工作原理](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/View%20%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86.md)
+18. [AOP](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/AOP.md)
 
 ##### Gralde Plugin、Groovy
 
