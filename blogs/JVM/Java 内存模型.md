@@ -32,7 +32,7 @@ Java 内存模型中定义了以下八种操作，虚拟机实现时必须保证
 - lock 锁定
 - unlock 解锁
 - read 读取
-- laod 载入
+- load 载入
 - use 使用
 - assign 复制
 - store 赋值
