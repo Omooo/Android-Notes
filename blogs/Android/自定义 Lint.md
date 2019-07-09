@@ -4,7 +4,7 @@
 
 ![](https://i.loli.net/2019/07/09/5d243bc10f1aa59752.png)
 
-#### 前言
+### 前言
 
 首先，先要仔细想想，什么时候需要用到自定义 Lint 呢？
 
@@ -28,13 +28,13 @@ ThreadDetector：用于检测直接通过 new Thread 创建线程，提示应该
 
 **源码地址：**[https://github.com/Omooo/CustomLint](https://github.com/Omooo/CustomLint)
 
-#### 正文
+### 正文
 
 先来看一个简单的自定义 Lint 是怎么样一步一步写出来的，该例子实际上来自 [https://github.com/googlesamples/android-custom-lint-rules](https://github.com/googlesamples/android-custom-lint-rules) ，该 Rep 就一个 SampleCodeDetector，也就是上文中所说的。
 
 自定义 Lint 一共可以分为四步：
 
-##### 第一步：创建 java library 工程
+#### 第一步：创建 java library 工程
 
 在 build.gradle 文件里添加依赖：
 
@@ -43,7 +43,7 @@ compileOnly "com.android.tools.lint:lint-api:26.4.1"
 compileOnly "com.android.tools.lint:lint-checks:26.4.1"
 ```
 
-##### 第二步：创建 Detector
+#### 第二步：创建 Detector
 
 ```java
 public class SampleDetector extends Detector implements Detector.UastScanner {
@@ -103,7 +103,7 @@ Lint API 中内置了很多 Scanner：
 
 这里需要注意的一点是，如果对应的 ISSUE 严重程度为错误（Severity.ERROR），那么在默认情况下，会中断编译流程，当然，你也可以配置 LintOptions 来抑制 Lint 错误。
 
-##### 第三步：注册 Detector
+#### 第三步：注册 Detector
 
 ```java
 public class CustomIssueRegistry extends IssueRegistry {
@@ -124,7 +124,7 @@ public class CustomIssueRegistry extends IssueRegistry {
 
 这里可以注册多个 Detector，目前最新版本的 Lint 内置了 360 种 Detector，都在 BuiltinIssueRegistry 类中，可以作为我们编写自定义 Lint 的最佳参考案例。
 
-##### 第四步：引入自定义 Lint
+#### 第四步：引入自定义 Lint
 
 首先需要在 lint_library 中的 build.gradle 文件中添加，完整代码为：
 
@@ -157,13 +157,13 @@ dependencies {
 }
 ```
 
-#### Lint 进阶
+### Lint 进阶
 
 以上，一个简单的自定义 Lint 就写完了，但是有点意犹未尽的感觉。这时候就需要你发挥想象力，想想自己需要什么。你可以参考我给的源码，或者参考 Android 内置的 Lint 源码，看看它们能做什么。
 
 这一小节很重要，但是我并不会给你讲如何去实现某某功能，自己看源码学习，因为真的不难哇。
 
-#### 最后
+### 最后
 
 如果你很懒，很烦每次都敲一遍 ./gradlew lint 去查看 Lint 输出，那么可以把执行 Lint 任务挂载在每次安装 Debug 包之前，即：
 
