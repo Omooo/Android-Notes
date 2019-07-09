@@ -46,6 +46,7 @@ Android Notes
 16. [IntentService 源码分析](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/IntentService.md)
 17. [View 工作原理](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/View%20%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86.md)
 18. [AOP](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/AOP.md)
+19. [自定义 Lint](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E8%87%AA%E5%AE%9A%E4%B9%89%20Lint.md)
 
 ##### Gralde Plugin、Groovy
 
