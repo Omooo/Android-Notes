@@ -6,9 +6,13 @@
 
 ### 前言
 
+Lint 是 Android Studio 内置的一个静态代码扫描工具，它可以检查 Android 项目源文件是否包含潜在错误，以及在正确性、安全性、性能、易用性、便利性和国际化方面是否需要优化改进。AS 已经内置了大量的 Lint 检查规则，但是当我们需要定制化规则时，就需要考虑自定义 Lint 了。
+
 首先，先要仔细想想，什么时候需要用到自定义 Lint 呢？
 
 这就要发挥你的想象力了，我最初是想推 webp，用以替换掉 png，这样就需要开发者每次自觉的将 png 转化为 webp，但是又不可能结对编程，监督他进行转化，所以自定义 Lint 就派上用场了。
+
+但是，目前网上的绝大多数博客都还停留在 AS 2.x 的 Lint API 上，关于 AS 3.x Lint API 的几乎是空白。从 AS 2.x 到 AS 3.x，Lint API 变化还挺大的，特别是对 Java 源文件的检测，从 JavaScanner 过渡到 JavaPsiScanner 再到 UastScanner，自定义 Lint 的注册以及引用方式也都发生了变化。本文也是从 Google 的一个 Sample 再参考系统内置的 Lint 实现，一点点摸索出来的。
 
 以下是项目中的自定义 Lint 实现效果：
 
@@ -178,3 +182,4 @@ project.afterEvaluate {
 }
 ```
 
+（逃～
