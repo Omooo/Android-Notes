@@ -54,6 +54,8 @@ Android Notes
 
 [Gralde Plugin 实践之 TinyPng Plugin](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/TinyPngPlugin.md)
 
+[Gradle 详解 Extension](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Extension.md)
+
 《Android Gradle 权威指南读书笔记》
 
 - [基础知识相关](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Android%20Gradle%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0%E4%B9%8B%E4%B8%80.md)
