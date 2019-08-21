@@ -61,6 +61,8 @@ Android Notes
 - [基础知识相关](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Android%20Gradle%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0%E4%B9%8B%E4%B8%80.md)
 - [进阶知识相关](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Android%20Gradle%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0%E4%B9%8B%E4%BA%8C.md)
 
+[Gradle 练习之一 --- 输出项目第三方库以及本地依赖库的权限信息](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/%E4%BE%9D%E8%B5%96%E6%9D%83%E9%99%90%E4%BF%A1%E6%81%AF.md)
+
 ##### JVM、ART 相关
 
 - Class 文件格式
