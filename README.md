@@ -63,6 +63,8 @@ Android Notes
 
 [Gradle 练习之一 --- 输出项目第三方库以及本地依赖库的权限信息](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/%E4%BE%9D%E8%B5%96%E6%9D%83%E9%99%90%E4%BF%A1%E6%81%AF.md)
 
+[Android Gradle Plugin 流程分析](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Gradle/Android%20Gradle%20Plugin%20%E6%B5%81%E7%A8%8B%E5%88%86%E6%9E%90.md)
+
 ##### JVM、ART 相关
 
 - Class 文件格式
