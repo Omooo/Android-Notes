@@ -2,8 +2,6 @@
 Booster 探究之路
 ---
 
-![](https://i.loli.net/2019/09/04/6safQDUGKu4Woqm.jpg)
-
 > Booster 是一款专门为移动应用设计的易用、轻量级且可扩展的质量优化框架，通过动态发现和加载机制提供可扩展的能力。它不仅仅是一个框架，而且还内置了很多质量优化工具。
 >
 > Booster 主要由 Transform 和 Task 组成，Transform 主要用于处理字节码，Task 主要用于处理资源，为了满足特异的优化需求，Booster 提供了 Transformer SPI and VariantProcessor SPI 允许开发者进行定制。
