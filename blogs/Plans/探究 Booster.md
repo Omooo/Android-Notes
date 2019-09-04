@@ -18,7 +18,7 @@ Booster 是滴滴开源的移动 APP 质量优化框架，开源地址：[Booste
 
 ![](https://i.loli.net/2019/09/04/tykZqwsj6dLPWUM.jpg)
 
-### 期望结果
+### 最后期望
 
 1. 熟悉 Kotlin 函数式编程
 2. 掌握 Gradle Plugin 的编写、Transfrom / Task 运用、以及字节码操作库 ASM 的使用
