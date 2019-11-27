@@ -49,3 +49,10 @@ Google 率先发布了 SPDY 协议，后续 IETF 组织在 SPDY 协议的基础�
 - 连接迁移
 - 前向冗余纠错
 
+
+
+资源下载：
+
+[PTT](https://github.com/Omooo/Android-Notes/tree/master/PPT/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3%20HTTP)
+
+[参考书籍](https://github.com/Omooo/Android-Notes/tree/master/books/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C)
