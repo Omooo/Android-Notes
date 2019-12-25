@@ -45,3 +45,11 @@ TLS 握手过程如下：
 肯定不是，所以有了 TLS 会话机制，可以基于 Session ID 和 Session Ticket。
 
 TLS 在 2018 年正式发布，它移除了很多已证明不安全的套件，在第一次握手时客户端把所有的密码套件及其公钥都发给了服务端，也就不再需要 Server Key Exchange 和 Client Key Exchange，从 2 RTT 到 1RR。同时，TLS 1.3 支持基于会话恢复的 0RTT 握手。
+
+#### 参考资料
+
+[深入浅出 HTTPS 从原理到实战](https://pan.baidu.com/s/1oFsmzXPW5EQX3wfTvg_Y9w)
+
+密码:bt2d
+
+[深入理解 HTTPS PPT](https://github.com/Omooo/Android-Notes/tree/master/PPT/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3%20HTTPS)
