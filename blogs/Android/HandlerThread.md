@@ -103,6 +103,7 @@ public class HandlerThread extends Thread {
         Looper.prepare();
         synchronized (this) {
             mLooper = Looper.myLooper();
+          	// 通知取 Looper 的线程，此时 Looper 已经创建好了
             notifyAll();
         }
         Process.setThreadPriority(mPriority);
@@ -119,6 +120,7 @@ public class HandlerThread extends Thread {
         synchronized (this) {
             while (isAlive() && mLooper == null) {
                 try {
+                  	// 如果新线程还未创建 Looper，则等待
                     wait();
                 } catch (InterruptedException e) {
                 }
