@@ -194,7 +194,7 @@ final void handleResumeActivity(IBinder token) {
 
 5. 生命周期回调
 
-![Activity 启动流程](/Users/omooo/Downloads/Activity 启动流程.png)
+![Activity 启动流程.png](https://i.loli.net/2020/03/23/tcsnLmOjI7DagKl.png)
 
 #### 说说 Activity 的启动流程
 
