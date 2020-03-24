@@ -103,6 +103,136 @@ bindServiceLocked(IApplicationThread caller, ...){
         requestServiceBindingLocked(s, b.intent, false);
     }
 }
+```
 
+```java
+final String bringUpServiceLocked(ServiceRecord r, ...) {
+    if(r.app != null && r.app.thread != null){
+        // 如果 Service 已经启动，就执行 Service#onStartCommand
+        // 在 bind service 中没啥用
+        sendServiceArgsLocked(r, ...);
+        return null;
+    }
+    ProcessRecord app = mAm.getProcessRecordLocked(procName, ...);
+    if(app != null && app.thread != null) {
+        realStartServiceLocked(r, app, execlnFg);
+        return null;
+    }
+    if(app == null){
+        app = mAm.startProcessLocked(procName, ...);
+    }
+    if(!mPendingService.contains(r)){
+        mPendingService.add(r);
+    }
+    return null;
+}
+```
+
+```java
+void realStartServiceLocked(ServiceRecord r, ProcessRecord app, ...) {
+    r.app = app;
+    // scheduleCreateService: 向应用端发起 IPC 调用
+    // 应用端收到之后就会去创建 Service，并执行 onCreate 回调
+    // r: class ServiceRecord extends Binder{}
+    app.thread.scheduleCreateService(r, r.serviceInfo, ...);
+    // 请求 Service 发布它的 binder 句柄给 AMS
+    requestServiceBindingLocked(r, ...);
+    // 触发 Service 的 onStartCommand 回调
+    sendServiceArgsLocked(r, ...);
+}
+boolean requestServiceBindingLocked(ServiceRecord r, ...) {
+    if(r.app == null || r.app.thread == null){
+        return false;
+    }
+    if((!i.requested||rebind)&&i.apps.size()>0){
+        r.app.thread.scheduleBindService(r, rebind, ...);
+        if(!rebind){
+            i.requested = true;
+        }
+        i.doRebind = false;
+    }
+    return true;
+}
+// scheduleBindService 的处理过程
+private void handleBindService(BindServiceData data) {
+    Service s = mService.get(data.token);
+    if(!data.rebind){
+        IBinder binder = s.onBind(data.intent);
+        ActivityManagerNative.getDefault().publishService(data.token, data.intent, binder);
+    }else {
+        s.onRebind(data.intent);
+    }
+}
+```
+
+```java
+// AMS#publishServiceLocked
+void publishServiceLocked(ServiceRecord r, Intent intent, IBinder service) {
+    Intent.FilterComparison filter = new Intent.FilterComparison(intent);
+    IntentBindRecord b = r.bindings.get(filter);
+    if(b!=null && !b.received){
+        b.binder = service;
+        b.requested = true;
+        b.received = true;
+        for(int conni=r.connections.size()-1;conni>=0;conni--) {
+            ArrayList<ConnectionRecord> clist = r.connections.valueAt(conni);
+            for(int i=0;i<clist.size();i++){
+                ConnectionRecord c = clist.get(i);
+                if(!filter.equals(c.binding.intent.intent)){
+                    continue;
+                }
+                c.conn.connected(r.name, service);
+            }
+        }
+    }
+}
+```
+
+onRebind 什么时候调用？
+
+```java
+int bindServiceLocked(IApplicationThread caller, IBinder token, ) {
+    if(s.app!=null&&b.intent.received){
+        if(b.intent.apps.size()==1&&b.intent.doRebind){
+            requestServiceBindingLocked(s, b.intent, callerFg, true);
+        }
+    }
+}
+boolean unbindServiceLocked(IServiceConnection connection) {
+    IBinder binder = connection.asBinder();
+    ArrayList<ConnectionRecord> clist = mServiceConnections.get(binder);
+    while(clist.size()>0){
+        ConnectionRecord r = clist.get(0);
+        removeConnectionLocked(r, null, null);
+        if(clist.size()>0&&clist.get(0)==r){
+            clist.remove(0);
+        }
+    }
+    return true;
+}
+void removeConnectionLocked(ConnectionRecord c, ...){
+    if(s.app!=null&&s.app.thread!=null&&b.intent.apps.size()==0&&b.intent.hasBound){
+        b.intent.hasBound = false;
+        b.intent.doRebind = false;
+        s.app.thread.scheduleUnbindService(s, b.intent.intent.getIntent());
+    }
+}
+private void handleUnbindService(BindServiceData data) {
+    Service s = mService.get(data.token);
+    boolean doRebind = s.onUnbind(data.intent);
+    if(doRebind){
+        ActivityManagerNative.getDefault().unbindFinished(doRebind);
+    }
+}
+// AMS#unbindFinishedLocked
+void unbindFinishedLocked(ServiceRecord r, Intent intent, boolean doRebind) {
+    Intent.FilterComparison filter = new Intent.FilterComparison(intent);
+    IntentBindRecord b = r.bindings.get(filter);
+    if(b.apps.size()>0&&!inDestorying) {
+        
+    }else {
+        b.doRebind = true;
+    }
+}
 ```
 
