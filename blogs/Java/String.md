@@ -261,6 +261,23 @@ System.out.println(str2==str1);
 1. String、StringBuilder、StingBuffer 的区别？
 2. String name = "Omooo" 和 String name = new String("Omoo") 、String name = new String("Omoo") + "o" 的区别以及分别创建了多少个对象？
 
+#### 更新
+
+String 不可变性的理解？
+
+往往一般的回答里只会说道 String 被 final 修饰就完事了。其实有两点：
+
+1. String 被 final 修饰，说明 String 类绝不可能被继承了，也就是说任何对 String 的操作方法，都不会被继承覆写
+2. String 中保存数据的是一个 char 的数组 value，value 也是被 final 修饰的，也就是说 value 一旦被赋值，内存地址是绝对无法被修改的，而且 value 的权限是 private 的，外部绝对访问不到，String 也没有开放出可以对 value 进行赋值的方法，所以说 value 一旦产生，内存地址就根本无法被修改
+
+因为 String 具有不变性，所以 String 的大多数操作方法，就会返回新的 String，如下面这种写法是不对的：
+
+```java
+String str = "2333";
+// 无法替换，要改成: str = str.replace("2", "3");
+str.replace("2", "3")
+```
+
 #### 参考
 
 [String 源码浅析(一)](https://juejin.im/post/5c2588d8f265da6110371d2b)
