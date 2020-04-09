@@ -278,6 +278,30 @@ String str = "2333";
 str.replace("2", "3")
 ```
 
+Java String 可以有多长？
+
+```
+// 字节码层面
+CONSTANT_Utf8_info {
+	u1 tag;
+	u2 length;
+	u1 bytes[length];
+}
+```
+
+看起来也就是可以存 65535 个字节，但是实际上呢，最多只能存 65534 个字节，原因在于：
+
+```java
+// Javac 源码：Gen.java
+private void checkStringConstant(DiagnosticPosition pos, Object constValue) {
+    // < 65535
+	if((String)constValue.length() < Pool.MAX_STRING_LENGTH)
+        return;
+}
+```
+
+
+
 #### 参考
 
 [String 源码浅析(一)](https://juejin.im/post/5c2588d8f265da6110371d2b)
