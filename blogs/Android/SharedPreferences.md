@@ -408,10 +408,28 @@ SharedPreferencesImpl#getXxx ：
 3. 不要使用 MODE_MULTI_PROCESS
 4. 高频写操作的 key 与高频读操作的 key 可以适当的拆分文件，以减少同步锁竞争
 5. 不要连续多次 edit，每次 edit 就是打开一次文件，应该获取一次 edit，然后多次执行 putXxx，减少内存波动，所以在封装方法的时候要注意了
+6. apply 在 QueueWork 维护的单线程池调用，虽然是异步的但是可能会阻塞 Service.onStop 和 Activity.onPause 方法，可能会导致 ANR
+
+ANR 容易发生的地方：
+
+1. sp.getXxx，首先会调用 awaitLoadedLocked 等待首次 sp 文件创建与读取操作完成
+2. sp.apply 虽然是异步的但是可能会在 Service Activity 等生命周期期间 mcr.writtenToDiskLatch.await() 等待过久
+3. sp.commit 最终会调用 sp.writeToFile 方法，很耗时
+4. ContextImpl.getSharedPreferences，主线程直接调用的话，如果 sp 文件很大处理时间也就会变成
+
+#### 时序图
+
+引自以下参考文章：
+
+![](https://i.loli.net/2020/04/10/P7LHhcNxCrUvuAq.png)
+
+
 
 #### 参考
 
 [全面剖析SharedPreferences](http://gityuan.com/2017/06/18/SharedPreferences/)
 
 [浅析SharedPreferences](https://juejin.im/post/5bcbd780f265da0ad948056a)
+
+[SharedPrederences 源码视角](https://xiaozhuanlan.com/topic/4509731862)
 
