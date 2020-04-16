@@ -14,7 +14,9 @@ Handler 消息机制
    - MessageQueue
 5. 常见问题汇总
 6. 总结
-7. 参考
+7. 更新细节
+   - 设置同步分割栏
+8. 参考
 
 #### 思维导图
 
@@ -522,7 +524,6 @@ MessageQueue 有两个重要方法，一个是 enqueueMessage 用于存消息，
    }
    ```
 
-   
 
 #### 总结
 
@@ -533,6 +534,110 @@ MessageQueue 有两个重要方法，一个是 enqueueMessage 用于存消息，
 图片来源：
 
 [Android消息机制1-Handler(Java层)](http://gityuan.com/2015/12/26/handler-message-framework/)
+
+#### 更新细节
+
+上面已经把 Java 层的说清楚了，但是 Native 细节并没有讲到。其次，还有一些 Java 层的细节没有讲到。
+
+##### 设置同步分隔栏: MessageQueue.postSyncBarrier()
+
+同步分割栏的原理其实很简单，本质上就是通过创建一个 target 成员为 null 的 Message 并插入到消息队列中，这样在这个特殊的 Message 之后的消息就不会被处理了，只有当这个 Message 被移除后才会继续执行之后的 Message。
+
+最经典的实现就是 ViewRootImpl 调用 scheduleTraversals 方法进行视图更新时的使用：
+
+```java
+void scheduleTraversals() {
+    if (!mTraversalScheduled) {
+        mTraversalScheduled = true;
+        // 执行分割操作后会获取到分割令牌，使用它可以移除分割栏
+        mTraversalBarrier = mHandler.getLooper().getQueue().postSyncBarrier();
+        // 发出一个有异步标志的Message，避免被分割
+        // postCallback 里面会把 Message 设置为异步消息
+        mChoreographer.postCallback(
+            Choreographer.CALLBACK_TRAVERSAL, mTraversalRunnable, null);
+        ...
+    }
+}
+```
+
+在执行 doTraversal 方法后，才会移除分割栏：
+
+```java
+void doTraversal() {
+    if (mTraversalScheduled) {
+        mTraversalScheduled = false;
+        mHandler.getLooper().getQueue().removeSyncBarrier(mTraversalBarrier);
+
+        performTraversals();
+
+        ...
+    }
+}
+```
+
+这样做的原因是，doTraversal 的操作是通过 Handler 进行处理的，然而这个消息队列却是整个主线程公用的，比如说四大组件的各个生命周期的调用，然后 doTraversal 的内容是更新 UI，这个任务无疑是最高优先级的，所以在这之前，需要确保队列中其它同步消息不会影响到它的执行。
+
+看一下 MessageQueue.postSyncBarrier() 的实现：
+
+```java
+public int postSyncBarrier() {
+    return postSyncBarrier(SystemClock.uptimeMillis());
+}
+
+private int postSyncBarrier(long when) {
+    synchronized (this) {
+        final int token = mNextBarrierToken++;
+        final Message msg = Message.obtain();
+        msg.markInUse();
+        msg.when = when;
+        msg.arg1 = token;
+        // 注意这里，并没有为target成员进行初始化
+
+        Message prev = null;
+        Message p = mMessages;
+        // 插入到队列中
+        if (when != 0) {
+            while (p != null && p.when <= when) {
+                prev = p;
+                p = p.next;
+            }
+        }
+        if (prev != null) { // invariant: p == prev.next
+            msg.next = p;
+            prev.next = msg;
+        } else {
+            msg.next = p;
+            mMessages = msg;
+        }
+        return token;
+    }
+}
+```
+
+可以看到，设置分割栏和普通的 post Message 是一样的，不同的是 target 为空。
+
+分割栏真正起作用的地方是在：
+
+```java
+Message next() {
+    ...
+    for (;;) {
+        ...
+        // 进行队列遍历
+           Message msg = mMessages;
+        if (msg != null && msg.target == null) {
+            do {
+                prevMsg = msg;
+                msg = msg.next;
+            // 如果target为NULL，将会陷入这个循环，除非是有异步标志的消息才会跳出循环
+            } while (msg != null && !msg.isAsynchronous());
+        }
+        ...
+    }
+}
+```
+
+
 
 #### 参考
 
