@@ -645,3 +645,4 @@ Android SDK 26 源码。
 
 [Handler 都没搞懂，拿什么去跳槽啊？](<https://juejin.im/post/5c74b64a6fb9a049be5e22fc>)
 
+[Android消息机制，你真的了解Handler吗？](https://mp.weixin.qq.com/s/JSrMjvBVBYeq6iBOWTGUng)
