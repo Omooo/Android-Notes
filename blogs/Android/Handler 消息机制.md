@@ -16,6 +16,7 @@ Handler 消息机制
 6. 总结
 7. 更新细节
    - 设置同步分割栏
+   - Native 层实现
 8. 参考
 
 #### 思维导图
@@ -637,7 +638,118 @@ Message next() {
 }
 ```
 
+#### Native 层实现
 
+首先需要清楚，在 Java 层，在 Looper 的构造方法里面初始化了一个 MessageQueue：
+
+```java
+public final class MessageQueue {
+	private long mPtr;
+	
+	MessageQueue(boolean quitAllowed) {
+        mQuitAllowed = quitAllowed;
+        mPtr = nativeInit();
+    }
+}
+```
+
+通过 nativeInit 关联了 Native 层的 MessageQueue，在 Native 层的 MessageQueue 中创建了 Native 层的 Looper。
+
+```c++
+Looper::Looper(bool allowNonCallbacks) {
+    mWakeEventFd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+    rebuildEpollLocked();
+}
+void Looper::rebuildEpollLocked() {
+    mEpollFd = epoll_create(EPOLL_SIZE_HINT);
+    struct epoll_event eventItem;
+    memset(& eventItem, 0, sizeof(epoll_event)); // zero out unused members of data field union
+    eventItem.events = EPOLLIN;
+    eventItem.data.fd = mWakeEventFd;
+    int result = epoll_ctl(mEpollFd, EPOLL_CTL_ADD, mWakeEventFd, & eventItem);
+}
+```
+
+首先调用 epoll_create 来创建一个 epoll 实例，并且将它保存在 mEpollFd 中，然后将前面所创建的管道的读端描述符添加到这个 epoll 实例中，以便可以对它所描述的管道的写操作进行监听。
+
+Linux 系统的 epoll 机制是为了同时监听多个文件描述符的 IO 读写事件而设计的，它是一个多路复用 IO 接口，类似于 Linux 系统的 select 机制，但是它是 select 机制的增强版。如果一个 epoll 实例监听了大量的文件描述符的 IO 读写事件，但是只有少量的文件描述符是活跃的，那么这个 epoll 实例可以显著减少 CPU 的使用率，从而提高系统的并发处理能力。
+
+可以前面所创建的 epoll 实例只监听了一个文件描述符的 IO 写事件，这值得使用 epoll 机制来实现嘛？其实，以后我们还可以调用 C++ 层的 Looper 类的成员函数 addFd 向这个 epoll 实例中注册更多的文件描述符，以便可以监听它们的 IO 读写事件，这样就可以充分利用一个线程的消息循环来做其他事情了。在后面分析 Android 应用程序的键盘消息处理机制时，我们就会看到 C++ 层的 Looper 类的成员函数 addFd 的使用场景。
+
+在看 MessageQueue 的 next 方法：
+
+```java
+public class MessageQueue {
+	final Message next() {
+		for(;;){
+			nativePollOnce(mPtr, nextPollTimeoutMillis);
+		}
+	}
+}
+```
+
+nativePollOnce 是用来检查当前线程的消息队列中是否有新的消息需要处理，nextPollTimeoutMills 用来描述当消息队列没有新的消息需要处理时，当前线程需要进去睡眠等待状态的时间。
+
+```c++
+// Native 层的 Looper
+int Looper::pollOnce(int timeoutMillis, int* outFd, int* outEvents, void** outData) {
+	int result = 0;
+	for(;;){
+		if(result != 0){
+			return result;
+		}
+		result = pollInner(timeoutMillis);
+	}
+}
+
+int Looper::pollInner(int timeoutMillis) {
+	int result = POLL_WAKE;
+	struct epoll_event eventItems[EPOLL_MAX_EVENTS];
+    int eventCount = epoll_wait(mEpollFd, eventItems, EPOLL_MAX_EVENTS, timeoutMillis);
+        for (int i = 0; i < eventCount; i++) {
+        int fd = eventItems[i].data.fd;
+        uint32_t epollEvents = eventItems[i].events;
+        if (fd == mWakeEventFd) {
+            if (epollEvents & EPOLLIN) {
+                awoken();
+            }
+        }
+    }
+}
+```
+
+如果监听的文件描述符没有发生 IO 读写事件，那么当前线程就会在 epoll_wait 中进入睡眠等待状态，等待的时间由最后一个参数 timeoutMillis 来指定。
+
+从函数 epoll_wait 返回来之后，接下来第 11 行到第 21 行的 for 循环就检查是哪一个文件描述符发生了 IO 读写事件，如果是 mWakeReadPipeFd 并且发生的 IO 读写事件的类型是 EPOLLIN，就说明其他线程向当前线程所关联的一个管道写入了新的数据。
+
+当其他线程向当前线程的消息队列发送一个消息之后，它们就会向与当前线程所关联的一个管道写入一个新的数据，目的就是将当前线程唤醒，以便它可以及时的去处理刚刚发送到它的消息队列的消息。
+
+在分析 Java 层的 MessageQueue#enqueueMessage 时，我们知道，一个线程讲一个消息插入到一个消息队列之后，可能需要将目标线程唤醒，这需要分两种情况来讨论：
+
+1. 插入的消息在目标队列中间
+2. 插入的消息在目标队列头部
+
+第一种情况下，由于保存在目标消息队列头部的消息没有发生变化，因此当前线程无论如何都不需要对目标线程执行唤醒操作。
+
+第二种情况，由于保存在目标消息队列头部的消息发生了变化，因此，当前线程就需要将目标线程唤醒，以便它可以对保存在目标消息队列头部的新消息进行处理。但是如果这时目标线程不是正处于睡眠等待状态，那么当前线程就不需要对它进行唤醒，当前线程是否处于睡眠等待状态由 mBlocked 来记录。
+
+```c++
+// Native 层 MessageQueue#wake
+void NativeMessageQueue::wake() {
+	mLooper->wake();
+}
+
+void Looper::wake() {
+    uint64_t inc = 1;
+    ssize_t nWrite = TEMP_FAILURE_RETRY(write(mWakeEventFd, &inc, sizeof(uint64_t)));
+}
+```
+
+也就是调用 write 函数写一个 1，这时候目标线程就会因为这个管道发生了一个 IO 写事件而被唤醒。
+
+消息的处理过程就简单了：当一个线程没有新的消息需要处理时，它就会在 C++ 层的 Looper 类的成员函数 pollInner 中进入睡眠等待状态，因此，当这个线程有新的消息需要处理时，它首先会在 C++ 层的 Looper 类的成员函数 pollInnter 中被唤醒，然后沿着之前的调用路径一直返回到 Java 层的 Looper 类的静态成员函数 loop 中，最后就可以对新的消息进行处理了。
+
+Native 层分析完毕，总的来说就是利用 Linux 的 epoll 机制。
 
 #### 参考
 
