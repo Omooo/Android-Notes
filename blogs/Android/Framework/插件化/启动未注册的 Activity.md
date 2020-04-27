@@ -202,7 +202,142 @@ callActivityOnCreate 没有 Intent 参数，所以无法读取之前存放的要
 1. AMS 会认为每次要打开的 Activity 都是 SubActivity，那就相当于那些没有在 AndroidManifest 文件里面注册的 Activity 的 LaunchMode 就只能是默认类型，即使设置了 singleTop 或 singleTask，也不会生效。
 2. 兼容性问题，目前在 Android 6/7 上可行，但在 Android 7 以上就不行了，因为 AMN 的 gDefault 已经不存在了。
 
+#### Android 8 适配
 
+在 Android 8 中，ActivityManagerNative 中已经不存在 gDefault 字段了，转移到了 ActivityManager 类中，但此时这个字段改名为 IActivityManagerSingleton：
+
+```java
+    // ActivityManager
+    private static final Singleton<IActivityManager> IActivityManagerSingleton =
+            new Singleton<IActivityManager>() {
+                @Override
+                protected IActivityManager create() {
+                    final IBinder b = ServiceManager.getService(Context.ACTIVITY_SERVICE);
+                    final IActivityManager am = IActivityManager.Stub.asInterface(b);
+                    return am;
+                }
+            };
+```
+
+所以，需要的处理就变成了：
+
+```java
+        Object gDefault = null;
+
+        if (android.os.Build.VERSION.SDK_INT <= 25) {
+            // 获取 AMN 的 gDefault t单例 gDefault，gDefault是静态的
+            gDefault = RefInvoke.getStaticFieldObject("android.app.ActivityManagerNative", "gDefault");
+        } else {
+            // 获取 ActivityManager 的单例 IActivityManagerSingleton，它其实就是之前的 gDefault
+            gDefault = RefInvoke.getStaticFieldObject("android.app.ActivityManager", "IActivityManagerSingleton");
+        }
+```
+
+#### Android 9 适配
+
+在 Android 9 之前，我们是 Hook 掉 H 类的 mCallback 对象，拦截 handleMessage 方法，在里面它会根据 msg.what 来判断到底是哪种消息。在 H 类中，定义了几十种消息，比如说 LAUNCH_ACTIVITY 的值是 100，PAUSE_ACTIVITY 的值是 101。从 100-109 都是给 Activity 的生命周期函数准备的。从 110 开始，才是给 Application、Service、ContentProvider、BroadcastReceiver 准备的。
+
+但是在 Android 9，它重构了 H 类，把 100 到 109 这十个用于 Activity 的消息，都合并为 159 这个消息，消息名为 EXECUTE_TRANSACTION。
+
+为什么要这么改呢？我们知道 Activity 的生命周期图，这其实是一个由 Create、Pause、Resume、Stop、Destory、Restart 组成的状态机。按照设计模式中状态模式的定义，可以把每个状态都定义成一个类，于是便有了如下的类图：
+
+![](https://i.loli.net/2020/04/27/NgncLAk9jmGlDKY.png)
+
+就拿 LaunchActivity 来说，在 Android P 之前，是在 H 类的 handleMessage 方法的 switch 分支语句中，编写启动一个 Activity 的逻辑：
+
+```java
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case LAUNCH_ACTIVITY: {
+                    final ActivityClientRecord r = (ActivityClientRecord) msg.obj;
+
+                    r.packageInfo = getPackageInfoNoCheck(
+                            r.activityInfo.applicationInfo, r.compatInfo);
+                    handleLaunchActivity(r, null, "LAUNCH_ACTIVITY");
+                } break;
+            }
+        }
+```
+
+在 Android P 中，启动 Activity 的这部分逻辑，被转移到了 LaunchActivityItem 类的 execute 方法中：
+
+```java
+public class LaunchActivityItem extends ClientTransactionItem {
+
+    @Override
+    public void execute(ClientTransactionHandler client, IBinder token,
+            PendingTransactionActions pendingActions) {
+        ActivityClientRecord r = new ActivityClientRecord(token, mIntent, mIdent, mInfo,
+                mOverrideConfig, mCompatInfo, mReferrer, mVoiceInteractor, mState, mPersistentState,
+                mPendingResults, mPendingNewIntents, mIsForward,
+                mProfilerInfo, client);
+        client.handleLaunchActivity(r, pendingActions, null /* customIntent */);
+    }
+}
+```
+
+
+
+这就导致了我们之前的插件化解决方法，在 Android 9 上是不生效的，因为找不到 100 这个消息。为此我们需要拦截 159 这个消息。拦截后还需要判断这个消息到底是 Launch 还是 Pause 或者是 Resume。
+
+关键在于 H 类的 handleMessage 方法的 Message 参数，这个 Message 的 obj 字段，在 Message 是 159 的时候，返回的是 ClientTransaction 类型对象，它内部有一个 mActivityCallbacks 集合：
+
+```java
+public class ClientTransaction implements Parcelable, ObjectPoolItem {
+
+      private List<ClientTransactionItem> mActivityCallbacks;
+
+}
+```
+
+这个 mActivityCallbacks 集合中，存放的是 ClientTransactionItem 的各种子类对象，比如 LaunchActivityItem、DestoryActivityItem。拿到 LaunchActivityItem 类的对象，它内部有一个 mIntent 字段，里面存放的就是要启动的 Activity 名称，在这里进行替换。
+
+代码如下：
+
+```java
+class MockClass2 implements Handler.Callback {
+
+    Handler mBase;
+
+    public MockClass2(Handler base) {
+        mBase = base;
+    }
+
+    @Override
+    public boolean handleMessage(Message msg) {
+
+        switch (msg.what) {
+            // ActivityThread里面 "LAUNCH_ACTIVITY" 这个字段的值是100
+            // 本来使用反射的方式获取最好, 这里为了简便直接使用硬编码
+            case 100:   //for API 28以下
+                handleLaunchActivity(msg);
+                break;
+            case 159:   //for API 28
+                handleActivity(msg);
+                break;
+        }
+
+        mBase.handleMessage(msg);
+        return true;
+    }
+
+    private void handleActivity(Message msg) {
+        // 这里简单起见,直接取出TargetActivity;
+        Object obj = msg.obj;
+
+        List<Object> mActivityCallbacks = (List<Object>) RefInvoke.getFieldObject(obj, "mActivityCallbacks");
+        if(mActivityCallbacks.size() > 0) {
+            String className = "android.app.servertransaction.LaunchActivityItem";
+            if(mActivityCallbacks.get(0).getClass().getCanonicalName().equals(className)) {
+                Object object = mActivityCallbacks.get(0);
+                Intent intent = (Intent) RefInvoke.getFieldObject(object, "mIntent");
+                Intent target = intent.getParcelableExtra(AMSHookHelper.EXTRA_TARGET_INTENT);
+                intent.setComponent(target.getComponent());
+            }
+        }
+    }
+}
+```
 
 #### 参考
 
