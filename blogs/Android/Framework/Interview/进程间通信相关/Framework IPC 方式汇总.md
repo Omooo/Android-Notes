@@ -18,6 +18,8 @@ Android Framework 里面用到了哪些 IPC 方式？
 1. 半双工，单向的
 2. 一般是在父子进程之间使用
 
+管道使用起来还是很方便的，主要是可以和 epoll 相结合监听读写事件。
+
 ![](https://i.loli.net/2020/03/27/UcCtmGaYMWRoseb.png)
 
 Framework 哪用到了管道？
@@ -44,12 +46,14 @@ epoll 是如何监听读端事件的？
 ```c++
 int Looper::pollInner(int timeoutMillis){
 	struct epoll_event eventItems[EPOLL_MAX_EVENTS];
+    // epoll_wait 阻塞在这
 	int eventCount = epoll_wait(mEpollFd, eventItems, ...);
 	for(int i=0;i<eventCount;i++){
 		int fd = eventItems[i].data.fd;
 		uint32_t epollEvents = eventItems[i].events;
 		if(fd == mWakeReadPipeFd){
 			if(epollEvents&EPOLLIN){
+                // 把管道里面的东西读出来
 				awoken();
 			}
 		}
@@ -95,6 +99,7 @@ void runSelectLoop(String abiList){
 
 1. 很快，不需要多次拷贝
 2. 进程之间无需存在亲缘关系
+3. 传输大数据
 
 涉及进程之间大数据量传输主要就是图像相关的了：
 
@@ -140,6 +145,8 @@ public class Process{
 		sendSignal(pid, SIGNAL_KILL);
 	}
 }
+// Zygote 监听的 SIGCHID 信号，Zygote 启动子进程完成之后需要关注子进程挂了没有
+// 如果挂了，就需要回收相关资源，避免子进程成为一个僵尸进程
 static void SetSigChldHandler(){
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
