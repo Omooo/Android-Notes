@@ -160,3 +160,205 @@ ActivityStack 类的成员变量 mHistory 用来描述系统的 Activity 组件�
 
 现在，ActivityStack 类就得到了请求 AMS 执行启动 Activity 组件操作的源 Activity 组件，以及要启动的目标 Activity 组件的信息了，它们分别保存在 ActivityRecord 对象 sourceRecord 和 r 中。最后调用 startActivityUncheckedLocked 进一步执行启动目标 Activity 组件的操作。
 
+```java
+public class ActivityStack {
+    final int startActivityUncheckedLocked(ActivityRecord r, ...){
+        startActivityLocked(ActivityRecord r, ...);
+    }
+    
+    private final void startActivityLocked(ActivityRecord r, ...){
+        mHistory.add(addPos, r);
+        resumeTopActivityLocked(null);
+    }
+    
+    final boolean resumeTopActivityLocked(ActivityRecord prev){
+        // next 当前是 MainActivity
+        ActivityRecord next = topRunningActivityLocked(null);
+        // mResumedActivity 当前是 Launcher
+        if(mResumedActivity != null){
+            startPausingLocked();
+            return true;
+        }
+    }
+}
+```
+
+系统当前正在激活的 Activity 组件是 Launcher 组件，即 ActivityStack 类的成员变量 mResumedActivity 指向了 Launcher 组件，因此，接下来就会调用 startPausingLocked 来通知它进入 Paused 状态，它可以将焦点让给即将要启动的 MainActivity 组件。
+
+```java
+public class ActivityStack {
+    private final void startPausingLocked() {
+        ActivityRecord prev = mResumedActivity;
+        if (prev.app != null && prev.app.thread != null) {
+            prev.app.thread.schedulePauseActivity(...);
+        }
+    }
+}
+```
+
+ActivtyRecord 类有一个成员变量 app，它的类型为 ProcessRecord，用来描述一个 Activity 组件所运行在的应用程序进程；而 ProcessRecord 类又有一个 thread 成员变量，它的类型为 ApplicationThreadProxy，用来描述一个 Binder 代理对象，引用的是一个类型为 ApplicationThread 的 Binder 本地对象。
+
+```java
+class ApplicationThreadProxy implements IApplicationThread {
+    public final void schedulePauseActivity(IBinder token, ...){
+        Parcel data = Parcel.obtain();
+        data.writeStrongBinder(token);
+        mRemote.transact(SCHEDULE_PAUSE_ACTIVITY_TRANSACTION, data, null, IBinder.FLAG_ONEWAY);
+    }
+}
+```
+
+通过 ApplicationThreadProxy 类内部的一个 Binder 代理对象 mRemote 向 Launcher 组件所在的应用程序进程发送一个类型为 SCHEDULE_PAUSE_ACTIVITY_TRANSACTION 的进程间通信请求。
+
+这个进程间通信请求是异步的，因此，AMS 将它发送出去之后，就马上返回了。
+
+以上都是在 AMS 中执行的，接下来就会在应用程序 Launcher 中去处理 AMS 的请求了。
+
+```java
+public final class ActivityThread {
+    private final class ApplicationThread extends ApplicationThreadNative {
+        public final void schedulePauseActivity(IBinder token, ...) {
+            queueOrSendMessage(H.PAUSE_ACTIVITY, ...);
+        }
+    }
+}
+```
+
+ApplicationThread 类的成员函数 schedulePauseActivity 用来处理类型为 SCHEDULE_PAUSE_ACTIVITY_TRANSACTION 的进程间通信请求。
+
+最后调用外部类 ActivityThread 的 queueOrSendMessage 来向 Launcher 的主进程的消息队列发送一个类型为 PAUSE_ACTIVITY 的消息。
+
+应用程序 Laucher 为什么不直接在当前线程中执行中止 Launcher 组件的操作呢？一方面是因为当前线程需要尽快返回到 Binder 线程池中去处理其他进程间通信请求；另一方面是因为在中止 Launcher 组件的过程中，可能会涉及用户页面相关的操作，因此就需要将它放在主线程中执行。
+
+```java
+public final class ActivityThread {
+    private final class H extends Handler {
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case PAUSE_ACTIVITY:
+                    handlePauseActivity(...);
+            }
+        }
+    }
+}
+
+public final class ActivityThread {
+    final HashMap<IBinder, ActivityClientRecord> mActivities
+        = new HashMap<>();
+    
+    private final void handlePauseActivity(IBinder token, ...) {
+        ActivityClientRecord r = mActivities.get(token);
+        if (r != null) {
+            performPauseActivity();
+            QueuedWork.waitToFinish();
+            ActivityManagerNative.getDefault().activityPaused(token, state);
+        }
+    }
+}
+```
+
+在应用程序进程中启动的每一个 Activity 组件都使用一个 ActivityClientRecord 对象来描述，这些 ActivtyClientRecord 对象对应于 ActivityManagerService 中的 ActivityRecord 对象，并且保存在 ActivityThread 类的成员变量 mActivities 中。
+
+调用成员函数 performPauseActivity 向 Launcher 组件发送一个中止事件通知，即调用它的成员函数 onPause。然后调用 QueuedWork 的 waitToFinish 等待完成前面的一些数据写入操作，例如将数据写入磁盘的操作。由于现在 Launcher 组件即将要进入 Paused 状态了，因此就要保证它前面的所有数据写入操作都处理完成；否则，等到它重新进入 Resumed 状态时，就无法恢复之前所保存的一些状态数据。
+
+完成这些事之后，ActivityThread 类的成员函数 handlePauseActivity 就处理完 AMS 给它发送的中止 Launcher 组件的进程间通信请求了。
+
+最后调用 ActivityManagerNative 类的静态成员函数 getDefault 来获得 AMS 的一个代理对象，然后再调用这个代理对象的成员函数 activityPaused 来通知 AMS Launcher 组件已经进入 Paused 状态了，因此，它就可以将 MainActivity 组件启动起来了。
+
+```java
+class ActivityManagerProxy implements IActivityManager {
+    public void activityPaused(IBinder token, ...) {
+        Parcel data = Parcel.obtain();
+        data.writeStrongBinder(token);
+        mRemote.transact(ACTIVITY_PAUSED_TRANSACTION, data, ...);
+    }
+}
+```
+
+将前面传进来的参数写入到 Parcel 对象 data 中，然后再通过 ActivityManagerProxy 类内部的一个 Binder 代理对象 mRemote 向 AMS 发送一个类型为 ACTIVITY_PAUSED_TRANSACTION 的进程间通信请求。
+
+以上都是在应用程序 Launcher 中执行的，接下来是在 AMS 中处理 Launcher 组件发出的进程间通信请求。
+
+```java
+public final int class ActivityManagerService extends ActivityManagerNative {
+    public final void activityPaused(IBinder token, ...) {
+        mMainStack.activityPaused(token, ...);
+    }
+}
+```
+
+ActivityManagerService 类的成员函数 activityPaused 用来处理类型为 ACTIVITY_PAUSED_TRANSACTION 的进程间通信请求。
+
+```java
+public class ActivityStack {
+    final void activityPaused(IBinder token, ...) {
+        ActivityRecord r = null;
+        r = (ActivityRecord)mHistory.get(index);
+        r.state = ActivityState.PAUSED;
+       completePauseLocked();
+    }
+}
+```
+
+首先把 Launcher 组件对应的 ActivityRecord 对象的 state 设置为 PAUSED 状态，表示 Launcher 组件已经进入 Paused 状态了。然后调用 completePauseLocked 来执行启动 MainActivity 组件的操作。
+
+```java
+public class ActivityStack {
+    private final void completePauseLocked() {
+        ActivityRecord prev = mPausingActivity;
+        resumeTopActivityLocked(prev);
+    }
+    
+    final boolean resumeTopActivityLocked(ActivityRecord prev) {
+        startSpecificActivityLocked(next, true, true);
+    }
+    
+    private final void startSpecificActivityLocked(ActivityRecord r, ...) {
+        ProcessRecord app = mService.getProcessRecordLocked(r.processName, ...);
+        if (app != null && app.thread != null) {
+            realStartActivityLocked(r, ...);
+            return;
+        }
+        mService.startProcessLocked(r.processName, r.info.application, true, 0, "activity", r.intent.getComponent(), false);
+    }
+}
+```
+
+在 AMS 中，每一个 Activity 组件都有一个用户 ID 和一个进程名称；其中，用户 ID 是在安装该 Activity 组件时由 PKMS 分配的，而进程名称则是由该 Activity 组件的 android:process 属性来决定的。AMS 在启动一个 Activity 组件时，首先会以它的用户 ID 和进程名称来检查系统中是否存在一个对应的应用程序进程。如果存在，就会直接通知这个应用程序进程将该 Activity 组件启动起来；否则，就会先以这个用户 ID 和进程名称来创建一个应用程序进程，然后再通知这个应用程序进程将该 Activity 组件启动起来。
+
+如果 ActivityRecord 对象 r 对应的 Activity 组件所需要的应用程序进程已经存在，就直接调用 realStartActivityLocked 来启动该 Activity 组件，否则，就先调用 startProcessLocked 为该 Activity 组件创建一个应用程序进程，然后再将它启动起来。
+
+由于 MainActivity 组件是第一次被启动，所以 AMS 会先创建应用程序进程。
+
+```java
+// AMS
+private final void startProcessLocked(...) {
+    int pid = Process.start("android.app.ActivityThread", ...);
+}
+```
+
+调用 Process 类的 start 来启动一个新的应用程序进程，指定了该进程的入口函数为 ActivityThread 的 main 函数。
+
+```java
+public final class ActivityThread {
+    final ApplicationThread mAppThread = new ApplicationThread();
+    
+    private final void attach(boolean system) {
+        IActivityManager mgr = ActivityManagerNative.getDefault();
+        mgr.attachApplication(mAppThread);
+    }
+    
+    public static final void main(String[] args) {
+        Looper.prepareMainLooper();
+        ActivityThread thread = new ActivityThread();
+        thread.attach(false);
+        Looper.loop();
+    }
+}
+```
+
+新的应用程序进程在启动时，主要做了两件事情：
+
+1. 在进程中创建一个 ActivityThread 对象，并且调用 attach 函数向 AMS 发送一个启动完成通知
+2. 创建一个消息循环
+
