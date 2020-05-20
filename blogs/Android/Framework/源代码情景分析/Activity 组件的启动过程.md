@@ -362,3 +362,53 @@ public final class ActivityThread {
 1. 在进程中创建一个 ActivityThread 对象，并且调用 attach 函数向 AMS 发送一个启动完成通知
 2. 创建一个消息循环
 
+我们主要关心新的应用程序进程是如何向 AMS 发送一个启动完成通知的。
+
+在创建 ActivityThread 对象 thread 时，会同时在它内部创建一个 ApplicationThread 对象 mAppThread。前面提到，ApplicationThread 对象是一个 Binder 本地对象，AMS 就是通过它来和应用程序进程通信的。
+
+在 ActivityThread 类的成员函数 attach 中，首先调用 ActivityManagerNative 类的静态成员函数 getDefault 来获得 AMS 的一个代理对象；然后调用它的成员函数 attachApplication 向 AMS 发送一个进程间通信请求，并且将前面所创建的 ApplicationThread 对象传递给 AMS。
+
+AMS 代理对象的类型为 ActivityManagerProxy：
+
+```java
+class ActivityManagerProxy implements IActivityManager {
+    public void attachApplication(IApplicationThread app) {
+        Parcel data = Parcel.obtain();
+        data.writeStrongBinder(app.asBinder());
+        mRemote.transact(ATTACH_APPLICATION_TRANSACTION, data, ...);
+    }
+}
+```
+
+以上是在新的应用程序进程中执行的，也就是通过 AMP 向 AMS 发送一个 ATTACH_APPLICATION_TRANSACTION 的进程间通信请求。
+
+```java
+// AMS
+public final void attachApplication(IApplicationThread thread) {
+    attachApplicationLocked(thread);
+}
+```
+
+AMS 类的成员函数 attachApplication 接收到新的应用程序进程发送过来的类型为 ATTACH_APPLICATION_TRANSACTION 的进程间通信请求之后，它就知道新的应用程序进程已经启动完成了。因此，接下来就是调用 attachApplicationLocked 来继续执行启动 MainActivity 组件的操作。
+
+```java
+// AMS
+private final boolean attachApplicationLocked(IApplicationThread thread, int pid) {
+    ProcessRecord app;
+    app.thread = thread;
+    ActivityRecord hr = mMainStack.topRunningActivityLocked(null);
+    mMainStack.realStartActivityLocked(hr, app, true, true);
+}
+```
+
+现在得到的这个 ProcessRecord 就是用来描述新创建的应用进程，然后拿位于 Activity 组件堆栈顶端的一个 ActivityRecord 对象 hr，与它对应的 Activity 组件就是即将要启动的 MainActivity 组件，然后调用 realStartActivityLocked 来请求启动 MainActivity 组件。
+
+```java
+// ActivityStack
+final boolean realStartActivityLocked(ActivityRecord r, ProcessRecord app, ...) {
+    r.app = app;
+    app.thread.scheduleLaunchActivity(new Intent(r.intent), ...);
+}
+```
+
+参数 app 的成员变量 thread 
