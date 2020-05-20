@@ -1,5 +1,5 @@
 ---
-Activity 组件的启动过程
+根 Activity 组件的启动过程
 ---
 
 #### 根 Activity 组件的启动过程
@@ -485,6 +485,20 @@ private final Activity performLaunchActivity(ActivityClientRecord r, Intent inte
     activity = mInstrumentation.newActivity(cl, component.getClassName(), r.intent);
     
     Application app = r.packageInfo.makeApplication(false, mInstrumentation);
+    ContextImpl appContext = new ContextImpl();
+    appContext.init(r.packageInfo, r.token, this);
+    appContext.setOuterContext(activity);
+    activity.attach(appContext, this, ...);
+    mInstrumentation.callActivityOnCreate(activity, r.state);
+    mActivities.put(r.token, r);
+    return activity;
 }
 ```
 
+首先通过 Instrumentation newActivity 创建一个 Activity，在实例化一个 ContextImpl，调用 Activity 的 attach 函数，最后再通过 Instrumentation 去调用 Activity 的 onCreate 方法。
+
+Activity 对象 activity 启动完成之后，就会以 ActivityClientRecord 对象 r 的成员变量 token 为关键字，将 ActivityClientRecord 对象 r 保存在 ActivityThread 类的成员变量 mActivities 中。
+
+ActivityClientRecord 对象 r 的成员变量 token 是一个 Binder 代理对象，它指向了 ActivityManagerService 内部的一个 ActivityRecord 对象。这个 ActivityRecord 对象和 ActivityClientRecord 对象 r 一样，都是用来描述前面启动的 Activity 组件的，只不过前者是在 AMS 中使用，而后者是在应用程序进程中使用。
+
+至此，MainActivity 组件的启动过程就分析完了。MainActivity 组件作为应用程序 Activity 的根 Activity，它启动起来之后，就意味着应用程序 Activity 启动起来了。因此，我们可以将一个根 Activity 的启动过程看做一个 Android 应用程序的启动过程。
