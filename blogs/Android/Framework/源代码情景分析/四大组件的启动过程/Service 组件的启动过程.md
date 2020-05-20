@@ -148,5 +148,26 @@ public void handleMessage(Message msg) {
             break;
     }
 }
+
+// ActivityThread
+private final void handleCreateService(CreateServiceData data) {
+    LoadedApk packageInfo = getPackageInfoNoCheck(data.info.applicationInfo);
+    Service service = null;
+    ClassLoader cl = packageInfo.getClassLoader();
+    service = (Service) cl.loadClass(data.info.name).newInstance();
+    ContextImpl context = new ContextImpl();
+    context.init(packageInfo, null, this);
+    
+    Application app = packageInfo.makeApplication(false, mInstrumentation);
+    context.setOuterContext(context);
+    service.attach(context, this, data.info.name, ...);
+    service.onCreate();
+    mServices.put(data.token, service);
+}
 ```
 
+首先调用 getPakcageInfoNoCheck 来获得一个用来描述即将要启动的 Service 组件所在的应用程序的 LoadedApk 对象，并且将它保存在变量 packageInfo 中。在进程中加载的每一个应用程序都使用一个 LoadedApk 对象来描述，通过它就可以访问到它所描述的应用程序的资源。
+
+然后通过 LoadedApk 对象的  getClassLoader 来获得一个类加载器来加载 Service 组件，在调用其 onCreate 方法。
+
+至此，Service 组件的启动过程就分析完了，它是在一个新的应用程序进程中启动的。
