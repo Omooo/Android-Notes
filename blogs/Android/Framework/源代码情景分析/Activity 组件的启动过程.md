@@ -411,4 +411,80 @@ final boolean realStartActivityLocked(ActivityRecord r, ProcessRecord app, ...) 
 }
 ```
 
-参数 app 的成员变量 thread 
+参数 app 的成员变量 thread 是一个类型为 ApplicationThreadProxy 的 Binder 代理对象，因此，接下来就会调用 ApplicationThreadProxy 类的成员函数 scheduleLaunchActivty 来向前面创建的应用程序进程发送一个进程间通信请求。
+
+```java
+class ApplicationThreadProxy implements IApplicationThread {
+    public final void scheduleLaunchActivity(Intent intent, IBinder token, ...) {
+        Parcel data = Parcel.obtain();
+        data.writeInterfaceToken(IApplicationThread.descriptor);
+        data.writeStrongBinder(token);
+        mRemote.transact(SCHEDULE_LAUNCH_ACTIVITY_TRANSACTION, data, null, IBinder.FLAG_ONEWAY);
+    }
+}
+```
+
+通过 ApplicationThreadProxy 类内部的一个 Binder 代理对象 mRemote 向前面创建的应用程序进程发送一个类型为 SCHEDULE_LAUNCH_ACTIVITY_TRANSACTION 的进程间通信请求。
+
+以上都是在 AMS 中执行的，接下来会在新创建的应用程序进程去处理 SCHEDULE_LAUNCH_ACTIVITY_TRANSACTION 的进程间通信请求。
+
+```java
+// ApplicationThread
+public final void scheduleLaunchActivity(Intent intent, IBinder token, ...) {
+    ActivityClientRecord r = new ActivityClientRecord();
+    r.token = token;
+    r.intent = intent;
+    r.activityInfo = info;
+    queueOrSendMessage(H.LAUNCH_ACTIVITY, r);
+}
+```
+
+ApplicationThread 类的成员函数 scheduleLaunchActivity 用来处理类型为 SCHEDULE_LAUNCH_ACTIVITY_TRANSACTION 的进程间通信请求，它主要是将要启动的 Activity 组件的信息封装成一个 ActivityClientRecord 对象，然后再以这个 ActivityClientRecord 对象为参数来调用 ActivityThread 类的成员函数 queueOrSendMessage，以便可以往新创建的应用程序进程的主线程的消息队列发送一个类型为 LAUNCH_ACTIVITY 的消息。
+
+前面说过，queueOrSendMessage 只是包装一个 Message 发送给主线程，消息会在 mH 的成员函数 handleMessage 中处理：
+
+```java
+// ActivityThread
+private final class H extends Handler {
+	public void handleMessage(Message msg) {
+		switch(msg.what) {
+			case LAUNCH_ACTIVITY: {
+				ActivityClientRecord r = msg.obj;
+				r.packageInfo = getPackageInfoNoCheck();
+				handleLaunchActivity(r, null);
+			}
+		}
+	}
+}
+```
+
+创建一个 LoadedApk 对象保存在 ActivityClientReocrd 的 packageInfo 中。
+
+每一个 Android 应用程序都是打包在一个 Apk 文件中的，一个 Apk 文件包含了应用程序的所有资源，应用程序进程在启动一个 Activity 组件时，需要将它所属的 Apk 文件加载进来，以便可以访问它里面的资源。在 ActivityThread 类内部，就使用一个 LoadedApk 对象来描述一个已加载的 Apk 文件。
+
+最后，调用 handleLaunchActivity 来启动由 ActivityClientRecord 对象 r 所描述的一个 Activity 组件，即 MainActivity 组件。
+
+```java
+// ActivityThread
+private final void handleLaunchActivity(ActivityClientRecord r, Intent intent) {
+    Activity a = performLaunchActivity(r, intent);
+    if (a != null) {
+        handleResumeActivity(r.token);
+    }
+}
+```
+
+首先调用 performLaunchActivity 将 MainActivity 组件启动起来接着调用 handleResumeActivity 将 MainActivity 组件的状态设置为 Resumed，表示它是系统当前激活的 Activity 组件。
+
+```java
+// ActivityThread
+private final Activity performLaunchActivity(ActivityClientRecord r, Intent intent) {
+    ComponentName component = r.intent.getComponent();
+    Activity activity = null;
+    ClassLoader cl = r.packageInfo.getClassLoader();
+    activity = mInstrumentation.newActivity(cl, component.getClassName(), r.intent);
+    
+    Application app = r.packageInfo.makeApplication(false, mInstrumentation);
+}
+```
+
