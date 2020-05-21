@@ -200,7 +200,36 @@ ContextImpl 类的成员变量 mPackageInfo 的类型为 LoadedApk，然后调�
 ```java
 // LoakdedApk
 public final IServiceConnection getServiceDispatcher(ServiceConnection c, Context context, Handler handler, int flags) {
+    LoadedApk.ServiceDispatcher sd = null;
+    HashMap<ServiceConnection, LoadedApk.ServiceDispatcher> map = mService.get(context);
+    if (map != null) {
+        sd = map.get(c);
+    }
+    if (sd == null) {
+        sd = new ServiceDispatcher(c, context, handler, flags);
+        if (map == null) {
+            map = new HashMap<>();
+            mServices.put(context, map);
+        }
+        map.put(c, sd);
+    }
+    return sd.getIServiceConnection();
+}
+```
+
+每一个绑定过 Service 组件的 Activity 组件在 LoadedApk 类中都有一个对应的 ServiceDispatcher 对象，它负责将这个被绑定的 Service 与绑定它的 Activity 组件关联在一起。这些 ServiceDispatcher 对象保存在一个 HashMap 中，并且以它们所关联的 ServiceConnection 对象为关键字。最后，用来保存这些 ServiceDispatcher 对象的 HashMap 又以它们所关联的 Activity 组件的 Context 接口为关键字保存在 LoadedApk 类的成员变量 mServices 中。
+
+首先在 mServices 中查找是否存在一个以 ServiceConnection 为 key 的 ServiceDispatcher 对象 sd。如果不存在就先创建 sd 然后存入 map 中。最后通过 ServiceDispatcher 的 getIServiceConnection 来获得一个实现了 IServiceConnection 接口的 Binder 本地对象，它的实现如下：
+
+```java
+// LoadedApk
+static final class ServiceDispatcher {
+    private final ServiceDispatcher.InnerConnection mIServiceConnection;
+    private final ServiceConnection mConnection;
+    private final Handler mActivityThread;
+    private final Context mContext;
     
+    private static class InnerConnection extends
 }
 ```
 
