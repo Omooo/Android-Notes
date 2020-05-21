@@ -171,3 +171,36 @@ private final void handleCreateService(CreateServiceData data) {
 然后通过 LoadedApk 对象的  getClassLoader 来获得一个类加载器来加载 Service 组件，在调用其 onCreate 方法。
 
 至此，Service 组件的启动过程就分析完了，它是在一个新的应用程序进程中启动的。
+
+#### 绑定服务的启动过程
+
+```java
+// ContextImpl
+private LoadedApk mPackageInfo;
+private ActivityThread mMainThread;
+public boolean bindService(Intent service, ServiceConnection conn, int flags) {
+    IServiceConnection sd = mPackageInfo.getServiceDispatcher(conn, getOuterContext(), mMainThread.getHandler(), flags);
+    int res = ActivityManagerNative.getDefault().bindService(
+    	mMainThread.getApplicationThread(), getActivityToken(),
+    	service, ...);
+    return res;
+    
+}
+```
+
+ContextImpl 类的成员变量 mPackageInfo 的类型为 LoadedApk，然后调用它的 getServiceDispatcher 将 ServiceConnection 对象封装成一个实现了 IServiceConnection 接口的 Binder 本地对象，然后再调用 AMS 代理对象的 bindService 函数。
+
+再将 ServiceConnection 对象封装成一个实现了 IServiceConnection 接口的 Binder 本地对象的过程中，还使用到了另外两个参数：
+
+1. 第一个参数是 mMainThread 的 mH，当 AMS 成功的将 Service 组件启动起来，并且获得它内部的一个 Binder 本地对象之后，AMS 便会将这个 Binder 本地对象传递给 Binder 本地对象 sd，接着 Binder 本地对象 sd 再将这个 Binder 本地对象封装成一个消息，发送到 Activity 组件所运行的应用程序的主线程消息队列中，最后在分发给 Activity 组件内部的成员变量 ServiceConnection 的 onServiceConnected 来处理。
+2. 第二个参数是通过 getOuterContext 函数来获得的，它指向的是一个 Activity 组件，这就是 bindService 是的 Activity 组件，这样，前面所获得的 Binder 本地对象 sd 就知道它所封装的 ServiceConnection 对象 conn 是与该 Activity 组件关联在一起的。
+
+接下来，我们继续分析 ContextImpl 类的成员变量 mPackageInfo 的成员变量 getServiceDispatcher 是如何将 ServiceConnection 对象 conn 封装成一个实现了 IServiceConnection 接口的 Binder 本地对象 sd 的：
+
+```java
+// LoakdedApk
+public final IServiceConnection getServiceDispatcher(ServiceConnection c, Context context, Handler handler, int flags) {
+    
+}
+```
+
