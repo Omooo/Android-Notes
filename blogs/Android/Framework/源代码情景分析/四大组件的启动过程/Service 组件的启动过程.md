@@ -229,7 +229,23 @@ static final class ServiceDispatcher {
     private final Handler mActivityThread;
     private final Context mContext;
     
-    private static class InnerConnection extends
+    private static class InnerConnection extends IServiceConnection.Stub {
+        fianl WeakReference<LoadedApk.ServiceDispatcher> mDispatcher;
+        InnerConnection(LoadedApk.ServiceDispatcher sd) {
+            mDispatcher = new WeakReference<>(sd);
+        }
+    }
+    
+    ServiceDispatcher(ServiceConnection conn, Context context, Handler activityThread, int flags) {
+        mIServiceConnection = new InnerConnection(this);
+        mConnection = conn;
+        mContext = context;
+        mActivityThread = activityThread;
+    }
+    
+    IServiceConnection getIServiceConnection() {
+        return mIServiceConnection;
+    }
 }
 ```
 
