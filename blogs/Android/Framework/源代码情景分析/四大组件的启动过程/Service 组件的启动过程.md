@@ -249,3 +249,54 @@ static final class ServiceDispatcher {
 }
 ```
 
+ServiceDispatcher 类有一个类型为 InnerConnection 的成员变量 mIServiceConnection，它指向一个实现了 IServiceConnection 接口的 Binder 本地对象。
+
+ServiceDispatcher 类还有另外三个成员变量 mConnection、mActivityThread 和 mContext，其中，成员变量 mContext 指向了一个 Activity 组件；成员变量 mActivityThread 和 mConnection 分别指向了与该 Activity 组件相关联的一个 Handler 对象和一个 ServiceConnection 对象。
+
+回到 ContextImpl 类的成员函数 bindService 中，它将 ServiceConnection 对象 conn 封装成一个 InnerConnection 对象之后，最后就请求 AMS 将 Service 组件绑定到 Activity 组件中。
+
+```java
+// AMP
+public int bindService(IApplicationThread caller, IBinder token, Intent service, ...) {
+    Parcel data = Parcel.obtain();
+    Parcel reply = Parcel.obtain();
+    data.writeInterfaceToken(IActivityManager.descriptor);
+    data.writeStrongBinder(caller);
+    service.writeToParcel(data, 0);
+    mRemote.transact(BIND_SERVICE_TRANSACTION, data, reply, 0);
+    int res = reply.readInt();
+    return res;
+}
+```
+
+通过 AMP 内部的一个 Binder 代理对象 mRemote 向 AMS 发送一个类型为 BIND_SERVICE_TRANSACTION 的进程间通信请求。
+
+以上都是在 Activity 组件中执行的，接下来就要到 AMS 中去处理该进程间通信请求了：
+
+```java
+// AMS
+public int bindService(IApplicationThread caller, IBinder token, Intent service, ...) {
+    final ProcessRecord callerApp = getRecordForAppLocked(caller);
+    ActivityRecord activity = null;
+    int aindex = mMainStack.indexOfTokenLocked(token);
+    activity = (ActivityRecord)mMainStack.mHistory.get(aindex);
+    ServiceLoopupResult = res = retrieveServiceLocked(service, resolvedType, Binder.getCallingPid(), Binder.getCallingUid());
+    ServiceRecord s = res.record;
+    AppBindRecord b = s.retrieveAppBindingLocked(service, callerApp);
+    ConnectionRecord c = new ConnectionRecord(b, activity, connection, ...);
+    IBinder binder = connection.asBinder();
+    ArrayList<ConnectionRecord> clist = s.connection.get(binder);
+    if(clist == null) {
+        clist = new ArrayList<>();
+        s.connections.put(binder, clist);
+    }
+    clist.add(c);
+    if((flags&Context.BIND_AUTO_CREATE) != 0) {
+        if(!bringUpServiceLocked(s, service.getFlags(), false)) {
+            return 0;
+        }
+    }
+    return 1;
+}
+```
+
