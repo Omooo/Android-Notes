@@ -300,3 +300,29 @@ public int bindService(IApplicationThread caller, IBinder token, Intent service,
 }
 ```
 
+ServiceRecord 类的成员函数 retrieveAppBindingLocked 的实现如下所示：
+
+```java
+class ServiceRecord extends Binder {
+    final HashMap<Intent.FilterComparison, IntentBindRecord> bindings = new HashMap<>();
+    
+    public AppBindRecord retrieveAppBindingLocked(Intent intent, ProcessRecord app) {
+        Intent.FilterComparison filter = new Intent.FilterComparison(intent);
+        IntentBindRecord i = bindings.get(filter);
+        if(i==null) {
+            i = new IntentBindRecord(this, filter);
+            bindings.put(filter, i);
+        }
+        AppBindRecord a = i.apps.get(app);
+        if(a!=null) {
+            return a;
+        }
+        a = new AppBindRecord(this, i, app);
+        i.apps.put(app, a);
+        return a;
+    }
+}
+```
+
+当一个应用程序进程绑定了一个 Service 组件之后，用来描述这个应用程序进程的一个 ProcessRecord 对象就会被保存在用来描述这个被绑定的 Service 组件的一个 ServiceRecord 对象的成员变量 bingdigs 中。由于一个 Service 组件可能会被多个应用程序进程绑定，因此，用来描述这个 Service 组件的一个 ServiceRecord 对象就会使用一个 IntentBindRecord 对象来描述这些应用程序进程，并且以一个 FilterComparison 对象为关键字保存在该 ServiceRecord 对象的成员变量 bingdings 中。
+
