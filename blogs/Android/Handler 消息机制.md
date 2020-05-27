@@ -525,6 +525,19 @@ MessageQueue 有两个重要方法，一个是 enqueueMessage 用于存消息，
    }
    ```
 
+5. 你知道延时消息的原理嘛？
+
+   发送的消息 Message 有一个属性 when 用来记录这个消息需要处理的时间，when 的值：普通消息的处理时间是当前时间；而延时消息的处理时间是当前时间 + delay 的时间。Message 会按 when 递增插入到 MessageQueue，也就是越早时间的排在越前面。
+
+   在取消息处理时，如果时间还没到，就休眠到指定时间；如果当前时间已经到了，就返回这个消息交给 Handler 去分发，这样就实现处理延时消息了。休眠具体时间是在 MessageQueue 的 nativePollOnce 函数中处理，该函数的第二个参数就是指定需要休眠多少时间。
+
+6. 主线程的 Looper#loop() 在死循环，会很消耗资源嘛？
+
+   如果没有消息时，就会调用 MessageQueue 的 nativePollOnce 方法让线程进入休眠，当消息队列没有消息时，无限休眠；当队列的第一个消息还没到需要处理的时间时，则休眠时间为 Message.when - 当前时间。这样在空闲的时候主线程也不会消耗额外的资源了。而当有新消息入队时，enqueueMessage 里会判读是否需要通过 nativeWake 方法唤醒主线程来处理新消息。唤醒最终是通过往 EventFd 发起一个写操作，这样主线程就会收到一个可读事件进而从休眠状态被唤醒。
+
+7. 你知道 IdleHandler 嘛？
+
+   IdleHandler 是通过 MessageQueue.addIdleHandler 来添加到 MessageQueue 的，前面提到当 MessageQueue.next 当前没有需要处理的消息时就会进入休眠，而在进入休眠之前呢，就会调用 IdleHandler 接口里的 boolean queueIdle 方法。这个方法的返回 true 则调用后保留，下次队列空闲时还会继续调用；而如果返回 false 调用完就被 remove 了。可以用到做延时加载，而且是在空闲时加载。
 
 #### 总结
 
