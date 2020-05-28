@@ -326,3 +326,89 @@ class ServiceRecord extends Binder {
 
 当一个应用程序进程绑定了一个 Service 组件之后，用来描述这个应用程序进程的一个 ProcessRecord 对象就会被保存在用来描述这个被绑定的 Service 组件的一个 ServiceRecord 对象的成员变量 bingdigs 中。由于一个 Service 组件可能会被多个应用程序进程绑定，因此，用来描述这个 Service 组件的一个 ServiceRecord 对象就会使用一个 IntentBindRecord 对象来描述这些应用程序进程，并且以一个 FilterComparison 对象为关键字保存在该 ServiceRecord 对象的成员变量 bingdings 中。
 
+```java
+// AMS
+private final boolean bringUpServiceLocked(ServiceRecord r, int intentFlags, boolean whileRestarting) {
+    final String appName = r.processName;
+    ProcessRecord app = getProcessRecordLocked(appName, r.appInfo.uid);
+    if (app != null && pp.thread != null) {
+        realStartServiceLocked(r, app);
+        return true;
+    }
+}
+```
+
+首先也是会先判断该 Service 对应的应用程序进程是否已经存在，如果存在，就调用 realStartServiceLocked 来启动 Service。
+
+```java
+// AMS
+private final void realStartServiceLocked(ServiceRecord r, ProcessRecord app) {
+    r.app = app;
+    app.services.add(r);
+    app.thread.scheduleCreateService(r, r.serviceInfo);
+    requestServiceBindingsLocked(r);
+}
+```
+
+其实也是通过类型为 ApplicationThreadProxy 的 Binder 代理对象，它指向了 ProcessRecord 对象 app 所描述的应用程序进程中的一个 ApplicationThread 对象。让它来代理启动该 Service 组件。和之前一样，就是发了一个 SCHEDULE_CREATE_SERVICE_TRANSACTION 的进程间通信请求。
+
+ServiceRecord 对象 r 所描述的 Service 组件启动完成之后，AMS 就需要将它连接到请求绑定它的一个 Activity 组件中，这是通过 AMS 的 requestServiceBindingsLocked 来实现的。
+
+```java
+// AMS
+private final void requestServiceBindingsLocked(ServiceRecord r) {
+    Iterator<IntentBindRecord> bindings = r.bindings.values().iterator();
+    while (bindings.hasNext()) {
+        IntentBindRecord i = bindings.next();
+        if (!requestServiceBindingLocked(r, i, false)) {
+            break;
+        }
+    }
+}
+```
+
+在 ServiceRecord 对象 r 的成员变量 bindings 中，保存了一系列 IntentBindRecord 对象，每一个 IntentBindRecord 对象都用来描述若干个需要将 ServiceRecord 对象 r 所描述的 Service 组件绑定到它们里面去的应用程序进程。
+
+```java
+// AMS
+private final boolean requestServiceBindingLocked(ServiceRecord r, IntentBindRecord i, boolean rebind) {
+    if ((!i.requested || rebind) && i.apps.size() > 0) {
+        r.app.thread.scheduleBindService(r, i.intent.getIntent(), rebind);
+        if (!rebind) {
+            i.requested = true;
+        }
+        return true;
+    }
+}
+```
+
+参数 rebind 用来描述是否要将 ServiceRecord 对象 r 所描述的 Service 组件重新绑定到 IntentBindRecord 对象 i 所描述的应用程序进程中。从前面的调用过程可以知道，参数 rebind 的值为 false，这意味着 IntentBindRecord 对象 i 所描述的应用程序进程是第一次请求绑定 ServiceRecord 对象 r 所描述的 Service 组件的。
+
+接下来就是 AMS 会请求应用程序 Activity 组件返回 Service 组件内部的一个 Binder 本地对象。
+
+```java
+// ApplicationThreadProxy
+public final void scheduleBindService(IBinder token, Intent intent, boolean rebind) {
+    Parcel data = Parcel.obtain();
+    data.writeInterfaceToken(IApplicationThread.descriptor);
+    data.writeStrongBinder(token);
+    intent.writeToParcel(data, 0);
+    mRemote.transact(SCHEDULE_BIND_SERVICE_TRANSACTION, data, null, IBinder.FLAG_ONEWAY);
+    data.recycle();
+}
+```
+
+通过 ApplicationThreadProxy 类内部的一个 Binder 代理对象 mRemote 向应用程序发送一个类型为 SCHEDULE_BIND_SERVICE_TRANSACION 的进程间通信请求。
+
+接下来就会在应用程序进程处理一个 H.BIND_SERVICE 的消息：
+
+```java
+// ActivityThread
+private final void handleBindService(BindServiceData data) {
+    Service s = mService.get(data.token);
+    IBinder binder = s.onBind(data.intent);
+    ActivityManagerNative.getDefault().publishService(data.token, data.intent, binder);
+}
+```
+
+BindServiceData 对象 data 的成员变量 token 指向了一个 Binder 代理对象，它引用了 AMS 中的一个 ServiceRecord 对象，而这个 ServiceRecord 对象是用来描述应用程序的 Service 组件的。
