@@ -412,3 +412,47 @@ private final void handleBindService(BindServiceData data) {
 ```
 
 BindServiceData 对象 data 的成员变量 token 指向了一个 Binder 代理对象，它引用了 AMS 中的一个 ServiceRecord 对象，而这个 ServiceRecord 对象是用来描述应用程序的 Service 组件的。
+
+首先通过 Service 的 onBind 函数获取一个 Binder 本地对象，然后通过 publishService 将它传给 AMS。
+
+```java
+// ActivityManagerNative
+public void publishService(IBinder token, Intent intent, IBinder service) {
+    Parcel data = Parcel.obtain();
+    data.writeInterfaceToken(IActivityManager.descriptor);
+    data.writeStrongBinder(token);
+    mRemote.transact(PUBLISH_SERVICE_TRANSACTION, data, reply, 0);
+}
+```
+
+在 AMS 中处理该请求：
+
+```java
+// AMS
+public void publishService(IBinder token, Intent intent, IBinder service) {
+    ServiceRecord r = (ServiceRecord)token;
+    Intent.FilterComparison filter = new Intent.FilterComparison(intent);
+    IntentBindRecord b = r.bindings.get(filter);
+    IntentBindRecord b = r.bindings.get(filter);
+    b.binder = service;
+    b.requested = true;
+    b.received = true;
+    Iterator<ArrayList<ConnectionRecord>> it = r.connections.values().iterator();
+    while (it.hasNext()) {
+        ArrayList<ConnectionRecord> clist = it.next();
+        for (int i=0; i<clist.size(); i++) {
+            ConnectionRecord c = clist.get(i);
+            c.conn.connected(r.name, service);
+        }
+    }
+}
+```
+
+每一个需要绑定的 Activity 组件都使用一个 ConnectionRecord 对象来描述。由于不同的 Activity 组件可能会使用相同的 InnerConnection 对象来绑定 ServiceRecord 对象 r 所描述的 Service 组件，因此，AMS 就会把这些使用了同一个 InnerConnection 对象的 ConnectionRecord 对象放在同一个列表中。这样，AMS 就会得到与 ServiceRecord 对象 r 相关的一系列 ConnectionRecord 对象列表，它们最终保存在 ServiceRecord 对象 r 的成员变量 connections 所描述的一个 HashMap 中，并且以它们所使用的 InnerConnection 对象为关键字。
+
+ConnectionRecord 类的成员变量 conn 是一个类型为 IServiceConnection 的 Binder 代理对象，它引用了一个类型为 InnerConnection 的 Binder 本地对象。这个 Binder 本地对象是用来连接一个 Service 组件和一个 Activity 组件的，并且与这个 Activity 组件运行在同一个应用程序进程中。
+
+```java
+// LoadedApk
+```
+
