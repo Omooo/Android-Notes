@@ -454,5 +454,54 @@ ConnectionRecord 类的成员变量 conn 是一个类型为 IServiceConnection �
 
 ```java
 // LoadedApk
+static final class ServiceDispatcher {
+    private static class InnerConnection extends IServiceConnection.Stub {
+        final WeakReference<LoadedApk.ServiceDispatcher> mDispatcher;
+        
+        public void connected(ComponentName name, IBinder service) {
+            LoadedApk.ServiceDispatcher sd = mDispatcher.get();
+            sd.connected(name, service);
+        }
+    }
+}
 ```
 
+有调到了 ServiceDispatcher 的 connected 方法：
+
+```java
+// LoadedApk
+static final class ServiceDispatcher {
+    private final Handler mActivityThread;
+    
+    public void connected(ComponentName name, IBinder service) {
+        mActivityThread.post(new RunConnection(name, service, 0));
+    }
+    
+    static final class RunConnection implements Runnable {
+        RunConnection(ComponentName name, IBinder service, int command) {
+            mName = name;
+            mService = service;
+            mCommand = command;
+        }
+        
+        public void run() {
+            doConnected(mName, mService);
+        }
+        
+        final ComponentName mName;
+        final IBinder mService;
+        final int mCommand;
+    }
+}
+```
+
+调用 ServiceDispatcher 类的成员函数 doConnected 将 RunConnection 类内部成员函数 mService 所描述的一个 Binder 本地对象传递给 Activity 组件。
+
+```java
+// ServiceDispatcher
+public void doConnected(ComponentName name, IBinder service) {
+	mConnection.onServiceConnected(name, service);
+}
+```
+
+至此，Activity 组件绑定 Service 组件的过程就分析完成了，Activity 组件获得了 Service 组件的访问接口之后，就可以调用相关服务了。
