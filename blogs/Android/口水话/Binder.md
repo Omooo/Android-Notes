@@ -7,7 +7,8 @@ Binder 系列口水话
 1. 谈谈你对 Binder 的理解？
 2. 一次完整的 IPC 通信流程是怎样的？
 3. Binder 对象跨进程传递的原理是怎么样的？
-4. Framework 中其他的 IPC 通信方式 
+4. 说一说 Binder 的 oneway 机制
+5. Framework 中其他的 IPC 通信方式 
 
 #### 谈谈你对 Binder 的理解？
 
@@ -56,10 +57,24 @@ Service 端首先会开启一个 Binder 线程来处理进程间通信消息，�
 有以下五点：
 
 1. Parcel 的 writeStrongBinder 和 readStrongBinder
-2. Binder 在 Parcel 中存储原理，flat_binder_objet
+2. Binder 在 Parcel 中存储原理，flat_binder_object
 3. 说清楚 binder_node，binder_ref
 4. 目标进程根据 binder_ref 的 handle 创建 BpBinder
 5. 由 BpBinder 再往上到 BinderProxy 到业务层的 Proxy
+
+在 Native 层，Binder 对象是存在 Parcel 中的，通过 readStrongBinder/writeStrongBinder 来进行读或写，在其内部是通过一个 flat_binder_object 数据结构进行存储的，它的 type 字段是 BINDER_TYPE_BINDER，表示 Binder 实体对象，它的 cookie 指向自己。
+
+Parcel 到了驱动层是如何处理的呢？其实就是根据 flat_binder_object 创建用于在驱动层表示的 binder_node Binder 实体对象和 binder_ref Binder 引用对象。
+
+读 Binder 对象就是调用 unflatten_binder 把 flat_binder_object 解析出来，如果是 Binder 实体对象，返回的就是 cookie，如果是 Binder 引用对象，就是返回 getStrongProxyForHandle(handle)，其实也就是根据 handle 值 new BpBinder 出来。
+
+#### Binder OneWay 机制
+
+OneWay 就是异步 binder 调用，带 ONEWAY 的 waitForResponse 参数为 null，也就是不需要等待返回结果，而不带 ONEWAY 的，就是普通的 AIDL 接口，它是需要等待对方回复的。
+
+对于系统服务来说，一般都是 oneway 的，比如在启动 Activity 时，它是异步的，不会阻塞系统服务，但是在 Service 端，它是串行化的，都是放在进程的 todo 队列里面一个一个的进行分发处理。
+
+![](https://i.loli.net/2020/03/28/8ENCcGDdYVlUKQm.png)
 
 #### Framework IPC 方式汇总
 
