@@ -29,9 +29,9 @@ ClassFile{
 
 首先说明的是，以上的 u2 代表这个域长度为 2 个字节，u4 即代表 4 个字节。
 
-1. 根据规范，Class 文件前八个字节依次是 magic 魔数（取值必须是 0xCAFEBABE）、minor_version（次版本信息）和 major_version（主版本信息）。
+1. 根据[规范](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.1)，Class 文件前八个字节依次是 magic 魔数（取值必须是 0xCAFEBABE）、minor_version（次版本信息）和 major_version（主版本信息）。
 2. constant_pool_count 表示常量池数组中元素的个数，而 constant_pool 是一个存储 cp_info 的数组。每一个 Class 文件都包含一个常量池。注意，cp 数组的索引从 1 开始。
-3. access_flages，标明该类的访问权限，比如 public、private 之类的信息。
+3. access_flags，标明该类的访问权限，比如 public、private 之类的信息。
 4. this_class 和 super_class，存储的是指向常量池数组元素的索引。通过这两个索引可以知道当前类的类名以及父类名，只是类名，但不包含包名。
 5. interfaces_count 和 interfaces，这两个成员表示该类实现了多少个接口以及接口类的类名。和 this_class 一样，这两个成员也只是常量池数组里的索引号。真正的信息需要通过解析常量池的内容才能得到。
 6. fields_count 和 fields 包含了成员变量的数量以及它们的信息，成员变量信息由 field_info 结构体表示。
