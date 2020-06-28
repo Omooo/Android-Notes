@@ -199,6 +199,8 @@ JVM 也提供了内联缓存来加快动态绑定，它能够缓存虚方法调�
 
 Java 中的泛型不过是一个语法糖，在编译时还会将实际类型给擦除掉，不过会新增一个 checkcast 指令来做编译时检查，不过类型不匹配就抛出 ClassCastException。
 
+不过呢，字节码中仍然存在泛型参数的信息，如方法声明里的 T foo(T)，以及方法签名 Signature 中的 "(TT;)TT"，这些信息可以通过反射 Api getGenericXxx 拿到。
+
 #### JVM 是如何实现异常的？
 
 在 Java 中，所有的异常都是 Throwable 类或其子类，它有两大子类 Error 和 Exception。 当程序触发 Error 时，它的执行状态已经无法恢复，需要终止线程或者终止虚拟机，常见的比如内存溢出、对栈溢出等；Exception 又分为两类，一类是受检异常，比如 IOException，一类是运行时异常 RuntimeException，比如空指针、数组越界等。
