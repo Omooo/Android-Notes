@@ -66,7 +66,7 @@ Activity 即用户界面。
 | 从不透明的 B 再次回到 A | B_onPause、A_onRestart、A_onStart、A_onResume、B_onStop、B_onDestory |
 | 从透明的 B 再次回到 A   | B_onPause、A_onResume、B_onStop、B_onDestory                 |
 | 用户按 home 键          | onPause、onStop                                              |
-| 按 home 键回到应用      | onRestart、onStart                                           |
+| 按 home 键回到应用      | onRestart、onStart、onResume                                 |
 | 用户按 back 键会退      | onPause、onStop、onDestory                                   |
 
 透明 Activity 和 DialogActivity 类似，在跳到 DialogActivity 也不会回掉前一个 Activity 的 onStop 方法。
