@@ -21,3 +21,11 @@ Configuration 阶段会加载项目中所有模块的 build.gradle 文件，根�
 Execution 阶段才真正进行任务的执行。Gradle 会按照 task graph 中的依赖关系执行每一个任务，对于任务的执行前后也可以添加 hook 函数。项目中我也通过对 assembleRelease 进行 hook，在它执行完把生成的 release Apk 复制到指定目录。
 
 可以在项目中，使用 build --scan 来进行性能分析，查看这三个阶段做了哪些事情以及耗费了多少时间。
+
+#### Gradle Plugin
+
+#### Gradle 构建优化
+
+#### App 构建流程
+
+![](https://i.loli.net/2019/05/07/5cd14ad86262c.png)
