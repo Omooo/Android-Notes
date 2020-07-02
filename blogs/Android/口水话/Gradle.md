@@ -24,6 +24,16 @@ Execution 阶段才真正进行任务的执行。Gradle 会按照 task graph 中
 
 #### Gradle Plugin
 
+起初呢，是因为有一个需求就是，我们的 App 因为权限问题被警告了，组长就希望我能找出 app 模块及其依赖的第三方库里面的权限信息。首先我的思路就是先找出项目中的 Manifest 文件，在正则匹配出权限就行了。对于本地工程，这个很好做，可以直接通过 Variant 直接拿到 Manifest 文件，写个脚本在根目录的 subprojects 跑一遍就可以了。但是对于第三方库就没办法了。这时候我就想到，在 Apk 打包的时候有一个 MergeManifest 的过程，这个时候 Gradle 是肯定知道所有 Manifest 的，然后就去看一下 Gradle 源码是怎么做的。其实呢是在 ProcessApplicationManifest 这个 Task 来做的，Manifest 是放在 VariantData 的 ArtifactCollection 里面的。然后我就把它封装成一个 Task 命令行调用就可以拿到所有权限信息了。
+
+考虑到后面可能还会有一些类似的需求，于是我就写了一个插件。我觉得这是一个非常好的开端，之所以当初组长找到我做这件事是因为我之前在组内分享了 Gradle 的相关知识，包括 Gradle 的构建流程、Gradle 的核心概念 Task 以及利用 Transform API 结合 AspectJ、ASM 进行自动化埋点等。这对我来说呢是一个正向激励，后面我也越来越会做更多的分享。
+
+后面呢，我还在 Plugin 里面添加了自动 TinyPng 资源压缩，考虑到我们的 minApi 19，又做了全量的 png 转 webp 这一步的压缩是包含第三方库里面的图片的，使用的是 Google 开源的 cwebp 工具。再来做包体积优化时，发现存在不少的重复资源，也就是遍历生成 MD5 值进行比较，减少了约 150 kb。
+
+再之后，基于做了 MethodTracker，简单使用一个注解就可以查看方法耗时，还有基于 Choreographer 的 FPS 检测。这里当时是遇到一个问题的，我们知道插件里面的类，在外部模块是不能访问到的，然而我这里的注解以及 FPSDetector 都是需要在 app 模块使用的，这时候我就看了 JW 的 Hugo 的实现，它也是基于 AspectJ 做的方法耗时，因为它的注解也是可以在 app 模块使用的，看源码发现它不过是是把这个注解放到外部一个远程库的，然后在插件里面进行依赖的。Hugo 仅仅只有四个类，却有 7k 多的 Star，所以说有时候不能被表面吓着，以为会很麻烦其实很简单。
+
+在我写 Plugin 的之后，滴滴开源了 Booster，然后我就按照它的架构方式，使用 SPI 去自动注册 Task，这就不需要每新增一个 Task 都要去 apply 方法进行注册了。当时是用 Java 写的，也都切成了 Kotlin，并且也用的 kts 构建。
+
 #### Gradle 构建优化
 
 #### App 构建流程
