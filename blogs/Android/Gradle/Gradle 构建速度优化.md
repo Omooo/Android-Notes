@@ -65,6 +65,10 @@ implementation 阻止依赖传递，避免每次改动一处就要全量编译�
 
 除了上述的 Gradle 的通用优化之外，下面开始介绍针对 Android 的优化。
 
+##### 使用最新的 Android Gradle Plugin
+
+新版本的 AGP 每次更新都会修复大量 Bug 及提升性能等，因此保持最新的 AGP 版本有很大必要。
+
 ##### 关闭 APK split
 
 对于日常开发调试而言，我们通常不需要构建多架构或者多尺寸的 apk，因此可以使用某个标记来区别调试构建和正式构建。
@@ -98,3 +102,30 @@ android {
 ##### 避免 Android Manifest 改动
 
 避免 AndroidManifest 里面的字段进行动态化设置。
+
+##### 最小化使用资源文件
+
+```groovy
+android {
+    defaultConfig {
+        minSdkVersion 21
+        resConfigs("zh", "en")
+        if (project.hasProperty("devBuild")) {
+            resConfigs("zh-rCN", "xxhdpi")
+        }
+    }
+}
+```
+
+当你的应用包含大量本地化资源或为不同像素密度加入了特别的资源时，你可能需要应用这个小技巧来提高构件速度 --- 最小化开发阶段打包进应用的资源数量。
+
+构建系统默认会将声明过或者使用过的资源全部打包进 APK，但在开发阶段我们可能只用到了其中一套而已，针对这种情况，我们需要使用 resConfig() 来指定构建开发版本时所需要用到的资源，如语言版本和屏幕像素密度。
+
+##### 开启构建缓存
+
+```xml
+// gradle.properties
+org.gradle.caching=true
+```
+
+或者在命令行里加入 --build-cache 参数。
