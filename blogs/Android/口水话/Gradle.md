@@ -36,6 +36,14 @@ Execution 阶段才真正进行任务的执行。Gradle 会按照 task graph 中
 
 #### Gradle 构建优化
 
+首先就是使用较高版本的 Gradle 和 Android Gradle Plugin，在项目中，我主导了 Gradle 从 4.10.1 到 5.4.1 的升级。前面说过，Gradle 的构建分为三个阶段，分别是 Initialzation、Configuration 和 Execution 阶段。下面我就从这三个阶段来着手优化。
+
+在 Initialzation 阶段，可以在 gradle.properties 中开启构建缓存和并行构建，也可以适当增加内存分配；
+
+在 Configuration 阶段，避免使用动态版本和快照版本，动态版本即 1.0.+ 这种方式，快照版本即 SNAPSHOT，这两种方式都会迫使 Gradle 链接到远程仓库检查是否有依赖更新，默认有效期是 24h。我在项目中就发现一个友盟的 analyze 库使用了动态版本，然后就改为固定版本号；然后就是调整 repo 顺序并过滤请求，也就是把内部的 maven 仓库放在最前面，因为 Gradle 在查找远程库时，是串行查询所有 repo 中的 maven 地址的，直到找到可用的依赖，所以应该把最快和最高命中率的仓库放在前面。同时，在 Gradle 5.1 开始，可以指定特定 repo 下载特定的包名的依赖，然后我就在我们内部的 maven 库过滤 com.ehi 的依赖。这一操作能有效的减少 Configuration 阶段的时间；然后就是减少不必要的 Plugin，可以通过 build-scan 扫描项目中用到了哪些 Plugin，我在项目中发现我们 app 模块使用了一个 Google 的 osdecetor 的插件，但是搞了好久也没发现是哪里引入的，我怀疑是无良第三方库里面的，但是可惜一直没解决这个问题。
+
+在 Execution 阶段，可以通过 -x 跳过不需要的 Task。我是在自己的 AS 里面配置 -x test -x lint 过滤掉 Test 和 Lint 相关的 Task，并且配置了一个 -PdevBuild 参数，这样测试小伙伴在 Jenkins 打 Debug 时也能享受这种收益，除此之外，我还会根据这个参数来关闭 AAPT2 自带的 png 压缩和 png 的合法性检查、关闭多 abi 和多 density 的构建以及通过 resConfigs 来最小化使用资源文件。resConfigs 不仅可以减少包体积，在 debug 时可以选择只构建中文简体和 xxhdpi 的资源。
+
 #### App 构建流程
 
 ![](https://i.loli.net/2019/05/07/5cd14ad86262c.png)
