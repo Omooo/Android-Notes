@@ -197,9 +197,15 @@ JVM 也提供了内联缓存来加快动态绑定，它能够缓存虚方法调�
 
 #### JVM 是如何实现泛型的？
 
-Java 中的泛型不过是一个语法糖，在编译时还会将实际类型给擦除掉，不过会新增一个 checkcast 指令来做编译时检查，不过类型不匹配就抛出 ClassCastException。
+Java 中的泛型不过是一个语法糖，在编译时还会将实际类型给擦除掉，不过会新增一个 checkcast 指令来做编译时检查，如果类型不匹配就抛出 ClassCastException。
 
 不过呢，字节码中仍然存在泛型参数的信息，如方法声明里的 T foo(T)，以及方法签名 Signature 中的 "(TT;)TT"，这些信息可以通过反射 Api getGenericXxx 拿到。
+
+除此之外，需要注意的是，泛型结合数组会有一些容易忽视的问题。数组是协变且具体化的，数组会在运行时才知道并检查它们的元素类型约束，可能出现编译时正常但运行时抛出 ArrayStoreException，所以尽可能的使用列表，这就是 Effective Java 中推荐的列表优先于数组的建议。这在我们看集合源码时也能发现的到，比如 ArrayList，它里面存数据是一个 Object[]，而不是 E[]，只不过在取的时候进行了强转。还有就是利用通配符来提升 API 的灵活性，简而言之即 PECS 原则，上取下存。典型的案例即 Collections.copy 方法了：
+
+```java
+Collections.copy(List<? super T> dest, List<? extends T> src);
+```
 
 #### JVM 是如何实现异常的？
 
