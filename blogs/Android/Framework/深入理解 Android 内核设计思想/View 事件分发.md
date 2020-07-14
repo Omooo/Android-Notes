@@ -30,6 +30,25 @@ public final boolean dispatchPointerEvent(MotionEvent event) {
 如果判断是 TouchEvent，就会调用其 dispatchTouchEvent 方法处理。
 
 ```java
+// View
+public boolean dispatchTouchEvent (MotionEvent event) {
+   if (onFilterTouchEventForSecurity(event)) {
+        ListenerInfo li = mListenerInfo;
+        if (li != null && li.mOnTouchListener != null
+                && (mViewFlags & ENABLED_MASK) == ENABLED
+                && li.mOnTouchListener.onTouch(this, event)) {
+            result = true;
+        }
 
+        if (!result && onTouchEvent(event)) {
+            result = true;
+        }
+    }
+	return result;
+}
 ```
+
+可以看到，View 类中分发 TouchEvent 还是比较简单的，如果注册了 OnTouchListener 就调用其 onTouch 方法，如果返回 false，还会接着回调 onTouchEvent 方法。onTouchEvent 作为一种兜底方案，它在内部会根据 MotionEvent 的不同类型做相应处理，比如是 ACTION_UP，可能就需要执行 performClick 函数。
+
+#### ViewGroup 中 TouchEvent 的投递流程
 
