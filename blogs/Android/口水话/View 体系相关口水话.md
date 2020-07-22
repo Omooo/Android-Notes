@@ -30,7 +30,25 @@ WMS 是所有 Window 窗口的管理者，它负责 Window 的添加和删除、
 DecorView -> Activity -> PhoneWindow -> DecorView -> ViewGroup -> View
 ```
 
-这里面涉及了三个元素，Activity、ViewGroup 和 View。Activity 的 dispatchTouchEvent 前面说过，它的 onTouchEvent 一般都是返回 false 不消费往下传；在说 View 的 dispatchTouchEvent，如果注册了 OnTouchListener 就调用其 onTouch 方法，如果 onTouch 返回 false 还会接着调用 onTouchEvent 函数，onTouchEvent 作为一种兜底方案，它在内部会根据 MotionEvent 的不同类型做相应处理，比如是 ACTION_UP 就需要执行 performClick 函数。ViewGroup 因为涉及对子 View 的处理，其派发流程没有 View 那么简单直接，它重写了 dispatchTouchEvent 方法，
+这里面涉及了三个元素，Activity、ViewGroup 和 View。Activity 的 dispatchTouchEvent 前面说过，它的 onTouchEvent 一般都是返回 false 不消费往下传；在说 View 的 dispatchTouchEvent，如果注册了 OnTouchListener 就调用其 onTouch 方法，如果 onTouch 返回 false 还会接着调用 onTouchEvent 函数，onTouchEvent 作为一种兜底方案，它在内部会根据 MotionEvent 的不同类型做相应处理，比如是 ACTION_UP 就需要执行 performClick 函数。ViewGroup 因为涉及对子 View 的处理，其派发流程没有 View 那么简单直接，它重写了 dispatchTouchEvent 方法，如果 ViewGroup 允许拦截，就调用其 onInterceptTouchEvent 来判断是否要真正执行拦截了，如果拦截了就交由自己的 onTouchEvent 处理，如果不拦截，就从后遍历子 View 处理，它有两个函数可以过滤子 View，一个是判断这个子 View 是否接受 Pointer Events 事件，另一个是判断落点有没有落在子 View 范围内。如果都满足，则调用其 dispatchTouchEvent 处理。如果该子 View 是一个 ViewGroup 就继续调用其 dispatchTouchEvent，否则就是 View 的 dispatchTouchEvent 方法，如此循环往复，直到事件真正被处理。
+
+伪代码表示为：
+
+```java
+public boolean dispatchTouchEvent(MotionEvent event) {
+    boolean consume = false;
+    if (onInterceptTouchEvent(event)) {
+        consume = onTouchEvent(event);
+    } else {
+        consume = child.dispatchTouchEvent(event);
+    }
+    return consume;
+}
+```
+
+最后可以画一下这个图：
+
+![](https://i.loli.net/2019/02/11/5c60d51909117.png)
 
 #### View 刷新机制
 
