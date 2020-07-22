@@ -15,6 +15,11 @@ View 工作原理
 
 1. 初始化 PhoneWindow 和 WindowManager
 2. 初始化 DecorView
+3. ViewRootImpl 的创建和关联 DecorView
+4. 建立 PhoneWindow 和 WMS 之间的连接
+5. 建立与 SurfaceFlinger 之间的连接
+6. 申请 Surface
+7. 正式绘制 View 并显示
 
 #### 步骤一：初始化 PhoneWindow 和 WindowManager
 
