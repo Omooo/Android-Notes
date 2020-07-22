@@ -58,6 +58,18 @@ public boolean dispatchTouchEvent(MotionEvent event) {
 
 ![](https://i.loli.net/2020/07/22/qgVSpUYRJP7ycrO.jpg)
 
+到这里基本上事件分发就讲完了，但是还可以扩展一下，事件到底是从哪里来的？
+
+这就要涉及 ImputManagerService 相关的知识了。IMS 的创建过程和 WMS 类似，都是由 SystemServer 统一启动，在创建时 IMS 会把自己的实例传给 WMS，也就是表明 WMS 是 InputEvent 的派发者，这样的设计是自然而然的，因为 WMS 记录了当前系统中所有窗口的完整状态信息，所以也只有它才能判断应该把事件投递给哪一个具体的应用程序处理。
+
+IMS 在 Native 层创建了两个线程，InputReaderThread 和 InputDispatcherThread，前者负责从驱动节点中读取 Event，后者专责与分发事件。InputReaderThread 中的实现核心是 InputReader 类，但在 InputReader 实际上并不直接去访问设备节点，而是通过 EventHub 来完成这一工作。EventHub 通过读取 /dev/input 下的相关文件来判断是否有新事件，并通知 InputReader。InputDispatcherThread 在创建之初，就把自己的实例传给了 InputReaderThread，这样便可以源源不断的获取事件进行分发了。
+
+分发时是如何找到投递目标呢？也就是 findFocusedWindowTargetsLocked 方法的实现。也就是通过 InputMonitor 来找到 “最前端” 的窗口即可。这个 InputMonitor 是 WMS 提供的，而 IMS 实现了 WindowManagerCallbacks 接口，并把 InputMonitor 作为参数传递进去。在获知 InputTarget 之后，InputDispatcher 就需要和窗口建立连接，是通过 InputChannel，这也是一个跨进程通信，但是并不是采用 Binder，而是 Unix Domain Socket 实现。
+
+在 Java 层，InputEventReceiver 对 InputChannel 进行包装，它是一个抽象类，它唯一的实现 WindowInputEventReceiver 就是在 ViewRootImpl 中，这样 ViewRootImpl 就可以获取到事件了。在 ViewRootImpl 中，一旦获知 InputEvent，就会进行入队操作，如果是紧急事件就直接调用 doProcessInputEvent 处理，如果不是紧急事件，就会把这个 InputEvent 推送到消息队列，然后按顺序处理，此时需要注意 Message 为异步消息。
+
+至此，事件就流向了 ViewRootImpl 了。
+
 #### View 刷新机制
 
 当我们调用 View 的 invalidate 时刷新视图时，它会调到 ViewRootImp 的 invalidateChildInParent，这个方法首先会 checkThread 检查是否是主线程，然后调用其 scheduleTraversals 方法。这个方法就是视图绘制的开始，但是它并不是立即去执行 View 的三大流程，而是先往消息队列里面添加一个同步屏障，然后在往 Choreographer 里面注册一个 TRAVERSAL 的回调。在下一次 Vsync 信号到来时，会去执行 doTraversals 方法。
