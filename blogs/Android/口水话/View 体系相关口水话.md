@@ -48,7 +48,7 @@ public boolean dispatchTouchEvent(MotionEvent event) {
 
 最后可以画一下这个图：
 
-![](https://i.loli.net/2019/02/11/5c60d51909117.png)
+![](https://i.loli.net/2020/07/22/qgVSpUYRJP7ycrO.jpg)
 
 #### View 刷新机制
 
