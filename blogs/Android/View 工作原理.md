@@ -96,7 +96,15 @@ SurfaceFlinger 主要是进行 Layer 的合成和渲染。
 
 #### 步骤七：正式绘制 View 并显示
 
+接下来就是正式绘制 View 了，从 performTraversals 开始，Measure、Layout、Draw 三步走。
 
+第一步是获取 DecorView 的宽高的 MeasureSpec 然后执行 performMeasure 流程。MeasureSpec 简单来说就是一个 int 值，高 2 位表示测量模式，低 30 位用来表示大小。策略模式有三种，EXACTLY、AT_MOST、UNSPECIFIED。EXACTLY 对应为 match_parent 和具体数值的情况，表示父容器已经确定 View 的大小；AT_MOST 对应 wrap_content，表示父容器规定 View 最大只能是 SpecSize；UNSPECIFIED 表示不限定测量模式，父容器不对 View 做任何限制，这种适用于系统内部。接着说，performMeasure 中会去调用 DecorView 的 measure 方法，这个是 View 里面的方法并且是 final 的，它里面会把参数透传给 onMeasure 方法，这个方法是可以重写的，也就是我们可以干预 View 的测量过程。在 onMeasure 中，会通过 getDefaultSize 获取到宽高的默认值，然后调用 setMeasureDimension 将获取的值进行设置。在 getDefaultSize 中，无论是 EXACTLY 还是 AT_MOST，都会返回 MeasureSpec 中的大小，这个 SpecSize 就是测量后的最终结果。至于 UNSPECIFIED 的情况，则会返回一个建议的最小值，这个值和子元素设置的最小值以及它的背景大小有关。从这个默认实现来看，如果我们自定义一个 View 不重写它的 onMeasure 方法，那么 warp_content 和 match_parent 一样。所以 DecorView 重写了 onMeasure 函数，它本身是一个 FrameLayout，所以最后也会调用到 FrameLayout 的 onMeasure 函数，作为一个 ViewGroup，都会遍历子 View 并调用子 View 的 measure 方法。这样便实现了层层递归调用到了每个子 View 的 onMeasure 方法进行测量。
+
+第二步是执行 performLayout 的流程，也就是调用到 DecorView 的 layout 方法，也就是 View 里面的方法，如果 View 大小发生变化，则会回调 onSizeChanged 方法，如果 View 状态发生变化，则会回调 onLayout 方法，这个方法在 View 中是空实现，因此需要看 DecorView 的父容器 FrameLayout 的 onLayout 方法，这个方法就是遍历子 View 调用其 layout 方法进行布局，子 View 的 layout 方法被调用的时候，它的 onLayout 方法又会被调用，这样就布局完了所有的 View。
+
+第三步就是 performDraw 方法了，里面会调用 drawSoftware 方法，这个方法需要先通过 mSurface lockCanvas 获取一个 Canvas 对象，作为参数传给 DecorView 的 draw 方法。这个方法调用的是 View 的 draw 方法，先绘制 View 背景，然后绘制 View 的内容，如果有子 View 则会调用子 View 的 draw 方法，层层递归调用，最终完成绘制。
+
+完成这三步之后，会在 ActivityThread 的 handleResumeActivity 最后调用 Activity 的 makeVisible，这个方法就是将 DecorView 设置为可见状态。
 
 #### 参考
 
