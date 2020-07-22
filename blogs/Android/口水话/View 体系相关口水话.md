@@ -22,5 +22,20 @@ WMS 是所有 Window 窗口的管理者，它负责 Window 的添加和删除、
 
 #### View 事件分发
 
+在最新的 Android 系统中，事件的处理者不再由 InputEventReceiver 独自承担，而是通过多种形式的 InputStage 来分别处理，它们都有一个回调接口 onProcess 函数，这些都声明在 ViewRootImpl 内部类里面，并且在 setView 里面进行注册，比如有 ViewPreImeInputStage 用于分发 KeyEvent，这里我们重点关注与 MotionEvent 事件分发相关的 ViewPostImeInputStage。在它的 onProcess 函数中，如果判断事件类型是 SOURCE_CLASS_POINTER，即触摸屏的 MotionEvent 事件，就会调用 mView 的 dispatchPointerEvent 方法处理。也就是说事件分发最开始是传递给 DecorView 的，DecorView 的 dispatchTouchEvent 是传给 Window Callback 接口方法 dispatchTouchEvent，而 Activity 实现了 Window Callback 接口，在 Activity 的 dispatchTouchEvent 方法里，是调到 Window 的 dispatchTouchEvent，Window 的唯一实现类 PhoneWindow 又会把这个事件回传给 DecorView，DecorView 在它的 superDispatchTouchEvent 把事件转交给了 ViewGroup。
+
+所以，事件分发的流程是：
+
+```xml
+DecorView -> Activity -> PhoneWindow -> DecorView -> ViewGroup -> View
+```
+
+这里面涉及了三个元素，Activity、ViewGroup 和 View。Activity 的 dispatchTouchEvent 前面说过，它的 onTouchEvent 一般都是返回 false 不消费往下传；在说 View 的 dispatchTouchEvent，如果注册了 OnTouchListener 就调用其 onTouch 方法，如果 onTouch 返回 false 还会接着调用 onTouchEvent 函数，onTouchEvent 作为一种兜底方案，它在内部会根据 MotionEvent 的不同类型做相应处理，比如是 ACTION_UP 就需要执行 performClick 函数。ViewGroup 因为涉及对子 View 的处理，其派发流程没有 View 那么简单直接，它重写了 dispatchTouchEvent 方法，
+
 #### View 刷新机制
 
+当我们调用 View 的 invalidate 时刷新视图时，它会调到 ViewRootImp 的 invalidateChildInParent，这个方法首先会 checkThread 检查是否是主线程，然后调用其 scheduleTraversals 方法。这个方法就是视图绘制的开始，但是它并不是立即去执行 View 的三大流程，而是先往消息队列里面添加一个同步屏障，然后在往 Choreographer 里面注册一个 TRAVERSAL 的回调。在下一次 Vsync 信号到来时，会去执行 doTraversals 方法。
+
+Choreographer 主要是用来接收 Vsync 信号，并且在信号到来时去处理一些回调事件。事件类型有四种，分别是 Input、Animation、Traversal、Commit。在 Vsync 信号到来时，会依次处理这些事件，前三种比较好理解，第四种 Commit 是用来执行组件的 onTrimMemory 函数的。Choreographer 是通过 FrameDisplayEventReceiver 来监听底层发出的 Vsync 信号的，然后在它的回调函数 onVsync 中去处理，首先会计算掉帧，然后就是 doCallbacks 处理上面所说的回调事件。
+
+Vsync 信号可以理解为底层硬件的一个消息脉冲，它每 16ms 发出一次，它有两种方式发出，一种是 HWComposer 硬件产生，一种是用软件模拟，即 VsyncThread。不管使用哪种方式，都统一由 DispSyncThread 进行分发。
