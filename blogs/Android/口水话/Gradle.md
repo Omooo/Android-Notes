@@ -41,9 +41,9 @@ Execution 阶段才真正进行任务的执行。Gradle 会按照 task graph 中
 |        | 全量编译 | 代码增量 | 资源增量 |
 | ------ | -------- | -------- | -------- |
 | 优化前 | 1m 59s   | 27s      | 8s       |
-| 优化后 | 1m 42s   | 18s      | 6s       |
+| 优化后 | 1m 1s    | 9s       | 10s      |
 
-首先就是使用较高版本的 Gradle 和 Android Gradle Plugin，在项目中，我主导了 Gradle 从 4.10.1 到 5.4.1 的升级。前面说过，Gradle 的构建分为三个阶段，分别是 Initialzation、Configuration 和 Execution 阶段。下面我就从这三个阶段来着手优化。
+首先就是使用较高版本的 Gradle 和 Android Gradle Plugin，在项目中，我主导了 Gradle 从 4.10.1 到 6.5.1 的升级。前面说过，Gradle 的构建分为三个阶段，分别是 Initialzation、Configuration 和 Execution 阶段。下面我就从这三个阶段来着手优化。
 
 在 Initialzation 阶段，可以在 gradle.properties 中开启构建缓存和并行构建，也可以适当增加内存分配；
 
