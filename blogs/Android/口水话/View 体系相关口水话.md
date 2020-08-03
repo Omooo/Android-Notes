@@ -104,10 +104,10 @@ Vsync 信号可以理解为底层硬件的一个消息脉冲，它每 16ms 发�
             case MotionEvent.ACTION_DOWN:
                 dx = (int) ev.getRawX();
                 dy = (int) ev.getRawY();
-                getParent().requestDisallowInterceptTouchEvent(false);
+                getParent().requestDisallowInterceptTouchEvent(true);
                 break;
             case MotionEvent.ACTION_MOVE:
-                if (Math.abs(dx - ev.getRawX()) > Math.abs(dy - ev.getRawY()) + 80) {
+                if (Math.abs(dx - ev.getRawX()) > Math.abs(dy - ev.getRawY()) + 30) {
                     getParent().requestDisallowInterceptTouchEvent(false);
                 } else {
                     getParent().requestDisallowInterceptTouchEvent(true);
