@@ -7,6 +7,7 @@ View 体系相关口水话
 1. View 绘制流程
 2. View 事件分发
 3. View 刷新机制
+4. 项目总结
 
 #### View 绘制流程
 
@@ -77,3 +78,50 @@ IMS 在 Native 层创建了两个线程，InputReaderThread 和 InputDispatcherT
 Choreographer 主要是用来接收 Vsync 信号，并且在信号到来时去处理一些回调事件。事件类型有四种，分别是 Input、Animation、Traversal、Commit。在 Vsync 信号到来时，会依次处理这些事件，前三种比较好理解，第四种 Commit 是用来执行组件的 onTrimMemory 函数的。Choreographer 是通过 FrameDisplayEventReceiver 来监听底层发出的 Vsync 信号的，然后在它的回调函数 onVsync 中去处理，首先会计算掉帧，然后就是 doCallbacks 处理上面所说的回调事件。
 
 Vsync 信号可以理解为底层硬件的一个消息脉冲，它每 16ms 发出一次，它有两种方式发出，一种是 HWComposer 硬件产生，一种是用软件模拟，即 VsyncThread。不管使用哪种方式，都统一由 DispSyncThread 进行分发。
+
+#### 项目总结
+
+##### 自定义 View 
+
+待定。
+
+##### 事件分发
+
+熟悉事件分发是处理嵌套滑动的基础。
+
+在项目中，我们遇到了一个 ViewPager2 嵌套 RecyclerView 滑动过于灵敏的问题，即稍微滑动一点 RecyclerView 就会导致 ViewPager2 切换，这在使用 ViewPager 是没啥问题，但是 ViewPager2 内部使用的也是 RecyclerView + SnapHelper 做横向滑动，导致了滑动灵敏问题。又因为 ViewPager2 是 final 的，所以只能使用内部拦截法。
+
+解决办法是：重写 ViewPager2 的根布局 FrameLayout 的 dispatchTouchEvent，判断如果 dx>dy+30，即表明是横向滑动，requestDisallowTouchEvent(false) 允许 ViewPager2 去拦截处理。详细代码如下：
+
+```java
+    int dx = 0;
+    int dy = 0;
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+
+        switch (ev.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                dx = (int) ev.getRawX();
+                dy = (int) ev.getRawY();
+                getParent().requestDisallowInterceptTouchEvent(false);
+                break;
+            case MotionEvent.ACTION_MOVE:
+                if (Math.abs(dx - ev.getRawX()) > Math.abs(dy - ev.getRawY()) + 80) {
+                    getParent().requestDisallowInterceptTouchEvent(false);
+                } else {
+                    getParent().requestDisallowInterceptTouchEvent(true);
+                }
+                break;
+            case MotionEvent.ACTION_UP:
+                dx = 0;
+                dy = 0;
+                getParent().requestDisallowInterceptTouchEvent(false);
+                break;
+            default:
+                break;
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+```
+
