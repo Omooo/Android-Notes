@@ -196,7 +196,7 @@ Activity 也可以使用 findFragmentById 或 findFragmentByTag 来获取 Fragme
 
 4. getChildFragmentManager() 
 
-   在 Activity 前乳 Fragment 时，需要使用 FragmentManager，通过 Activity 提供的 getSupportFragmentManager() 方法即可获取，用于管理 Activity 里面嵌入的所有一级 Fragment。
+   在 Activity 嵌入 Fragment 时，需要使用 FragmentManager，通过 Activity 提供的 getSupportFragmentManager() 方法即可获取，用于管理 Activity 里面嵌入的所有一级 Fragment。
 
    然后有时候，我们会在 Fragment 里面继续嵌入多级 Fragment，这时候就需要通过 Fragment 来获取 FragmentManager 对象。
 
