@@ -433,3 +433,4 @@ ANR 容易发生的地方：
 
 [SharedPrederences 源码视角](https://xiaozhuanlan.com/topic/4509731862)
 
+[剖析 SharedPreference apply 引起的 ANR 问题](https://mp.weixin.qq.com/s/IFgXvPdiEYDs5cDriApkxQ)
