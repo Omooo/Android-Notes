@@ -31,7 +31,7 @@ RecyclerView 有四级缓存，这套复用机制的核心在 RecyclerView 的�
 
 2.一些通用的优化手段
 
-比如说避免 ItemView 的过渡绘制、减少布局嵌等，或者在适当情况下不通过 xml 来创建 View，而是直接 new View 来创建。
+比如说避免 ItemView 的过渡绘制、减少布局嵌套等，或者在适当情况下不通过 xml 来创建 View，而是直接 new View 来创建。
 
 3.升级 RecyclerView 版本
 
@@ -43,4 +43,6 @@ RecyclerView 有四级缓存，这套复用机制的核心在 RecyclerView 的�
 
 6.对 ItemView 设置监听器，不要对每个 Item 都调用 addXxxListener，应该共用一个 Listener，然后根据 id 来进行不同的操作，避免创过多的内部类。
 
-7.如果一个 ItemView 就占一屏，可以通过重写 LayoutManager 的 getExtraLayoutSpace 来增加 RecyclerView 预留的额外空间，也就是现实范围之外，应该额外缓存的空间。
+7.如果一个 ItemView 就占一屏，可以通过重写 LayoutManager 的 getExtraLayoutSpace 来增加 RecyclerView 预留的额外空间，也就是显示范围之外，应该额外缓存的空间。
+
+8.局部刷新
