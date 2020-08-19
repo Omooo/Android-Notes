@@ -44,7 +44,7 @@ Binder 驱动就会把这个请求交给 Binder 实体对象去处理，也就�
 
 到这里，已经讲完了 Client 端如何和 Binder 驱动进行交互的了，下面就讲 Service 端是如何和 Binder 驱动进行交互的。
 
-Service 端首先会开启一个 Binder 线程来处理进程间通信消息，也就是通过 new Thread 然后把该线程 joinThreadPool 注册到 Binder 驱动。注册呢也就是通过 BC_ENTER_LOOPER 命令协议来做的，接下来就是在 do while 死循环中调用 getAndExecuteCommand。它里面做的就是不断从驱动读取请求，也就是 talkWithDriver，然后再处理请求 executeCommand。在 executeCommand 中，就会根据 BR_TRANSACTION 来调用 BBinder Binder 实体对象的 onTransact 函数来进行处理，然后在发送一个 BC_REPLY 把响应结构返回给 Binder 驱动。Binder 驱动在接收到 BC_REPLY 之后就会向 Service 发送一个 BR_TRANSACTION_COMPLETE 协议表示 Binder 驱动已经收到了，在此同时呢，也会向 Client 端发送一个 BR_REPLY把响应回写给 Client 端。
+Service 端首先会开启一个 Binder 线程来处理进程间通信请求，也就是通过 new Thread 然后把该线程 joinThreadPool 注册到 Binder 驱动。注册呢也就是通过 BC_ENTER_LOOPER 命令协议来做的，接下来就是在 do while 死循环中调用 getAndExecuteCommand。它里面做的就是不断从驱动读取请求，也就是 talkWithDriver，然后再处理请求 executeCommand。在 executeCommand 中，就会根据 BR_TRANSACTION 来调用 BBinder Binder 实体对象的 onTransact 函数来进行处理，然后在发送一个 BC_REPLY 把响应结构返回给 Binder 驱动。Binder 驱动在接收到 BC_REPLY 之后就会向 Service 发送一个 BR_TRANSACTION_COMPLETE 协议表示 Binder 驱动已经收到了，在此同时呢，也会向 Client 端发送一个 BR_REPLY把响应回写给 Client 端。
 
 需要注意的是，上面的 onTransact 函数就是 Service 端 AIDL 生成的 Stub 类的 onTransact 函数，这时一次完整的 IPC 通信流程就完成了。
 
