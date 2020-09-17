@@ -69,7 +69,7 @@ Activity 即用户界面。
 | 按 home 键回到应用      | onRestart、onStart、onResume                                 |
 | 用户按 back 键会退      | onPause、onStop、onDestory                                   |
 
-透明 Activity 和 DialogActivity 类似，在跳到 DialogActivity 也不会回掉前一个 Activity 的 onStop 方法。
+透明 Activity 和 DialogActivity 类似，在跳到 DialogActivity 也不会回调前一个 Activity 的 onStop 方法。
 
 #### 启动模式
 
