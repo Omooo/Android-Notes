@@ -69,7 +69,7 @@ Android Notes
 2. [自动化埋点](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%9F%8B%E7%82%B9/%E5%9F%8B%E7%82%B9.md)
 3. [动画](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Animator.md)
 4. [Context](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Context.md)
-5. [Dalvik 与 ART](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Dalvik%20%5C%20ART.md)
+5. [Dalvik 与 ART](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Dalvik%20%E5%92%8C%20ART.md)
 6. [APT](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/APT.md)
 7. [Bundle、ArrayMap、SparseArray](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Bundle.md)
 8. [Hook 原来也就这么回事](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Hook.md)
