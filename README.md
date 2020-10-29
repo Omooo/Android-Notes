@@ -201,7 +201,7 @@ Android Notes
 
 [UncaughtExceptionHandler](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/UncaughtExceptionHandler.md)
 
-[Java 5 - Java 10 新特性总结](https://github.com/Omooo/Android-Notes/tree/master/blogs/Java/Java%205%20-%20Java%2010%20%E6%96%B0%E7%89%B9%E6%80%A7)
+[Java 5 - Java 10 新特性总结](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/Java%205%20-%20Java%2010%20%E6%96%B0%E7%89%B9%E6%80%A7.md)
 
 #### Java 并发
 
