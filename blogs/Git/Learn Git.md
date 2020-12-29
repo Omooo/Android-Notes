@@ -16,6 +16,32 @@ git log --oneline
 git log -n5 --oneline
 ```
 
+```java
+// 比较暂存区和 HEAD 之间的区别
+git diff --cached
+// 比较工作区和暂存区之间的区别
+git diff
+```
+
+```java
+git reset 有三个参数
+--soft 这个只是把 HEAD 指向的 commit 恢复到你指定的 commit，暂存区 工作区不变
+--hard 这个是 把 HEAD， 暂存区， 工作区 都修改为 你指定的 commit 的时候的文件状态
+--mixed 这个是不加时候的默认参数，把 HEAD，暂存区 修改为 你指定的 commit 的时候的文件状态，工作区保持不变
+```
+
+```java
+// git checkout 不仅可以切分支，还可以使工作区的内容保持和暂存区一致
+// 恢复 readme.md 文件和暂存区一致
+git checkout -- readme.md
+// 小结：
+// 已暂存区为中心
+// 暂存区与HEAD比较：git diff --cached
+// 暂存区与工作区比较: git diff
+// 暂存区恢复成HEAD : git reset HEAD
+// 暂存区覆盖工作区修改：git checkout
+```
+
 
 
 #### 情景模式
@@ -58,5 +84,51 @@ git commit --amend
 
 同理，这也可以用于多次修改一个提交。比如我们再往远程 push 时，我们希望只产生一个提交，这时候在本地开发时，可以多次 commit --amend 而不是多次 commit，这样就永远只会有一个提交了。
 
+
+
 情景三：合并多个提交为一个提交
+
+在我们自己的开发分支上可能有多个提交，一般在 QA 测试完之后，我们需要把本地分钟的提交合并到 master，一般不推荐直接 merge，而是切到 master，把我们自己的 commit pick 到 master 上。这时候就需要将我们的开发分支的多个提交压成一个提交，比如将最近的的三个提交压成一个提交：
+
+```java
+git rebase -i HEAD~3
+```
+
+然后就会有以下输出：
+
+```java
+pick 0f8d0e5 first commit
+pick 5beec24 second commit
+pick ab08235 third commit
+
+# Rebase da9da1b..a28b190 onto 0f8d0e5 (6 commands)
+#
+# Commands:
+# p, pick <commit> = use commit
+# r, reword <commit> = use commit, but edit the commit message
+# e, edit <commit> = use commit, but stop for amending
+# s, squash <commit> = use commit, but meld into previous commit
+# f, fixup <commit> = like "squash", but discard this commit's log message
+
+```
+
+这时候输入 I 进入编辑模式，改成以下：
+
+```
+pick 0f8d0e5 first commit
+s 5beec24 second commit
+s ab08235 third commit
+
+# Rebase da9da1b..a28b190 onto 0f8d0e5 (6 commands)
+#
+# Commands:
+# p, pick <commit> = use commit
+# r, reword <commit> = use commit, but edit the commit message
+# e, edit <commit> = use commit, but stop for amending
+# s, squash <commit> = use commit, but meld into previous commit
+# f, fixup <commit> = like "squash", but discard this commit's log message
+
+```
+
+也就是把 second 和 third commit 合并到 first commit 上。下面还有一些参数可以使用，比如说 r 就是保留提交，但是需要编辑 commit message。最后 esc :wq 保存就行了。
 
