@@ -83,8 +83,6 @@ AIO 是异步 IO 的缩写，虽然 NIO 在网络操作中，提供了非阻塞�
 
 #### 摘自：
 
-[BIO、NIO、AIO 总结](https://github.com/Snailclimb/JavaGuide/blob/master/Java%E7%9B%B8%E5%85%B3/BIO%2CNIO%2CAIO%20summary.md)
-
 [Java提供了哪些IO方式？ NIO如何实现多路复用？](https://time.geekbang.org/column/article/8369)
 
 [漫话：如何给女朋友解释什么是Linux的五种IO模型？](https://mp.weixin.qq.com/s?__biz=Mzg3MjA4MTExMw==&mid=2247484746&idx=1&sn=c0a7f9129d780786cabfcac0a8aa6bb7&source=41#wechat_redirect)
