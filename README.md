@@ -2,59 +2,6 @@
 Android Notes
 ---
 
-#### ✨✨✨ Android 面试必备 --- 口水话系列 ✨✨✨
-
-> 何为口水话呢？
->
-> 就是面试官问你相关问题的时候，你应该如何说的话。
->
-> 有没有遇到这样的场景，明明面试官问我的问题我会，我也看过甚至我自己也写过相关博客，但是在回答的时候还是支支吾吾说不清楚，或者不分轻重想到啥就说啥。
->
-> 口水话专门用来解决这个问题，它不同于一般博客语言琐碎，而是语言精炼，突出重点，以沟通的方式而非说教的形式去阐述问题。
-
-目前口水话涉及常见的 Android、Java、计算机网络问题，这些都是面试常见题。
-
-##### Android：
-
-[RecyclerView 相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/RecyclerView.md)   [View 体系相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/View%20%E4%BD%93%E7%B3%BB%E7%9B%B8%E5%85%B3%E5%8F%A3%E6%B0%B4%E8%AF%9D.md)   [动画相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/%E5%8A%A8%E7%94%BB%E7%9B%B8%E5%85%B3%E5%8F%A3%E6%B0%B4%E8%AF%9D.md)   [Handler 口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/Handler.md)   
-
-[四大组件启动流程口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/%E5%9B%9B%E5%A4%A7%E7%BB%84%E4%BB%B6%E7%9A%84%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%A3%E6%B0%B4%E8%AF%9D.md)   [Binder 相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/Binder.md)   [系统启动流程口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B.md)   
-
-[Gradle 相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/Gradle.md)   [性能优化相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%E5%8F%A3%E6%B0%B4%E8%AF%9D.md)   [热修复、插件话相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/%E6%8F%92%E4%BB%B6%E5%8C%96%E3%80%81%E7%83%AD%E4%BF%AE%E5%A4%8D%E7%9B%B8%E5%85%B3%E5%8F%A3%E6%B0%B4%E8%AF%9D.md)
-
-[项目总结](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/%E9%A1%B9%E7%9B%AE%E6%80%BB%E7%BB%93.md)
-
-##### Java&JVM：
-
-[JVM 相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/%E5%8F%A3%E6%B0%B4%E8%AF%9D/JVM%20%E7%9B%B8%E5%85%B3%E5%8F%A3%E6%B0%B4%E8%AF%9D.md)   [Java 并发相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/%E5%8F%A3%E6%B0%B4%E8%AF%9D/%E5%B9%B6%E5%8F%91%E7%9B%B8%E5%85%B3%E5%8F%A3%E6%B0%B4%E8%AF%9D.md)   [线程池口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/%E5%8F%A3%E6%B0%B4%E8%AF%9D/%E7%BA%BF%E7%A8%8B%E6%B1%A0.md)   [Java/Android 集合源码相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/%E5%8F%A3%E6%B0%B4%E8%AF%9D/%E9%9B%86%E5%90%88%E6%BA%90%E7%A0%81.md)
-
-##### 计算机网络：
-
-[HTTP1.x、HTTPS、HTTP2相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/computer_network/%E5%8F%A3%E6%B0%B4%E8%AF%9D/HTTP%E3%80%81HTTPS%E3%80%81HTTP2.md)   [TCP 口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/computer_network/%E5%8F%A3%E6%B0%B4%E8%AF%9D/TCP.md)
-
-##### 参考简历（大佬轻拍）：
-
-```
-1. 熟练掌握 Java，包括注解、反射、泛型、异常等相关知识，熟悉其在 JVM 的实现原理
-2. 熟悉 Java/Android 中常见的集合源码，包括 List、Set、Map、Queue/Deque 等
-3. 对 Java 并发有一定理解，熟悉 synchronized、volatile、原子类等实现原理
-4. 熟悉 JVM 相关知识，包括内存区域、内存模型、GC、类加载机制、编译优化等
-5. 熟练掌握 Android 应用层开发相关知识，熟悉四大组件、动画的使用
-6. 熟悉 View 相关体系，包括 View 绘制流程、事件分发、刷新机制
-7. 熟悉 Binder 进程间通信机制，熟悉其通信模型以及完整的通信流程
-8. 熟悉 Android 的系统启动流程，Activity、Service 启动流程、Handler 消息机制、SP 源码等
-9. 熟悉 Gradle 相关知识，包括自定义 Task、编译打包流程、自定义 Gradle Plugin、编译优化等
-10. 熟悉插件化的实现原理，静态代理式和 Hook 式；了解热修复的实现原理
-11. 了解常见的性能优化手段，做过包体积优化、布局优化、内存优化等
-12. 熟悉计算机网络相关协议，包括 TCP/IP、HTTP/1.x、HTTP2、HTTPS 等
-```
-
-这些知识点，在上述口水话里都有涉及，还有一些设计模式我没写上去，毕竟我也不熟悉...
-
-
-
-下面就是博客系列：
-
 #### Android
 
 [Activity](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Activity.md)   [Service](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Service.md)   [BroadcastReceiver](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/BroadcastReceiver.md)   [ContentProvider](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/ContextProvider.md)   [Fragment](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Fragment.md)
@@ -121,13 +68,13 @@ Android Notes
 
 [包体积优化](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%E5%8C%85%E4%BD%93%E7%A7%AF%E4%BC%98%E5%8C%96.md)
 
-[卡顿优化]
+[卡顿优化](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%E5%8D%A1%E9%A1%BF%E4%BC%98%E5%8C%96.md)
 
 [启动优化]
 
 [存储优化](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%E5%AD%98%E5%82%A8%E4%BC%98%E5%8C%96.md)
 
-[崩溃优化]
+[崩溃优化](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%E5%B4%A9%E6%BA%83%E4%BC%98%E5%8C%96.md)
 
 [电量优化]
 
@@ -353,3 +300,34 @@ Android Notes
 [面试题集](https://github.com/Omooo/Android-Notes/blob/master/blogs/Interview/%E9%9D%A2%E8%AF%95%E9%A2%98%E9%9B%86.md)
 
 - [Get 和 Post 请求的区别？](https://github.com/Omooo/Android-Notes/blob/master/blogs/Interview/Get%20%E5%92%8C%20Post%20%E7%9A%84%E5%8C%BA%E5%88%AB.md)
+
+#### ✨✨✨ Android 面试必备 --- 口水话系列 ✨✨✨
+
+> 何为口水话呢？
+>
+> 就是面试官问你相关问题的时候，你应该如何说的话。
+>
+> 有没有遇到这样的场景，明明面试官问我的问题我会，我也看过甚至我自己也写过相关博客，但是在回答的时候还是支支吾吾说不清楚，或者不分轻重想到啥就说啥。
+>
+> 口水话专门用来解决这个问题，它不同于一般博客语言琐碎，而是语言精炼，突出重点，以沟通的方式而非说教的形式去阐述问题。
+
+目前口水话涉及常见的 Android、Java、计算机网络问题，这些都是面试常见题。
+
+##### Android：
+
+[RecyclerView 相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/RecyclerView.md)   [View 体系相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/View%20%E4%BD%93%E7%B3%BB%E7%9B%B8%E5%85%B3%E5%8F%A3%E6%B0%B4%E8%AF%9D.md)   [动画相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/%E5%8A%A8%E7%94%BB%E7%9B%B8%E5%85%B3%E5%8F%A3%E6%B0%B4%E8%AF%9D.md)   [Handler 口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/Handler.md)   
+
+[四大组件启动流程口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/%E5%9B%9B%E5%A4%A7%E7%BB%84%E4%BB%B6%E7%9A%84%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%A3%E6%B0%B4%E8%AF%9D.md)   [Binder 相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/Binder.md)   [系统启动流程口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B.md)   
+
+[Gradle 相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/Gradle.md)   [性能优化相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%E5%8F%A3%E6%B0%B4%E8%AF%9D.md)   [热修复、插件话相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/%E6%8F%92%E4%BB%B6%E5%8C%96%E3%80%81%E7%83%AD%E4%BF%AE%E5%A4%8D%E7%9B%B8%E5%85%B3%E5%8F%A3%E6%B0%B4%E8%AF%9D.md)
+
+[项目总结](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/%E5%8F%A3%E6%B0%B4%E8%AF%9D/%E9%A1%B9%E7%9B%AE%E6%80%BB%E7%BB%93.md)
+
+##### Java&JVM：
+
+[JVM 相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/%E5%8F%A3%E6%B0%B4%E8%AF%9D/JVM%20%E7%9B%B8%E5%85%B3%E5%8F%A3%E6%B0%B4%E8%AF%9D.md)   [Java 并发相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/%E5%8F%A3%E6%B0%B4%E8%AF%9D/%E5%B9%B6%E5%8F%91%E7%9B%B8%E5%85%B3%E5%8F%A3%E6%B0%B4%E8%AF%9D.md)   [线程池口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/%E5%8F%A3%E6%B0%B4%E8%AF%9D/%E7%BA%BF%E7%A8%8B%E6%B1%A0.md)   [Java/Android 集合源码相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/Java/%E5%8F%A3%E6%B0%B4%E8%AF%9D/%E9%9B%86%E5%90%88%E6%BA%90%E7%A0%81.md)
+
+##### 计算机网络：
+
+[HTTP1.x、HTTPS、HTTP2相关口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/computer_network/%E5%8F%A3%E6%B0%B4%E8%AF%9D/HTTP%E3%80%81HTTPS%E3%80%81HTTP2.md)   [TCP 口水话](https://github.com/Omooo/Android-Notes/blob/master/blogs/computer_network/%E5%8F%A3%E6%B0%B4%E8%AF%9D/TCP.md)
+
