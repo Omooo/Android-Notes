@@ -2,6 +2,8 @@
 Android Notes
 ---
 
+![](https://s2.loli.net/2022/04/14/ev7rLflN4zDKkja.png)
+
 #### Android
 
 [Activity](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Activity.md)   [Service](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Service.md)   [BroadcastReceiver](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/BroadcastReceiver.md)   [ContentProvider](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/ContextProvider.md)   [Fragment](https://github.com/Omooo/Android-Notes/blob/master/blogs/Android/Fragment.md)
