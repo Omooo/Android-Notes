@@ -61,7 +61,7 @@ public boolean dispatchTouchEvent(MotionEvent event) {
 
 到这里基本上事件分发就讲完了，但是还可以扩展一下，事件到底是从哪里来的？
 
-这就要涉及 ImputManagerService 相关的知识了。IMS 的创建过程和 WMS 类似，都是由 SystemServer 统一启动，在创建时 IMS 会把自己的实例传给 WMS，也就是表明 WMS 是 InputEvent 的派发者，这样的设计是自然而然的，因为 WMS 记录了当前系统中所有窗口的完整状态信息，所以也只有它才能判断应该把事件投递给哪一个具体的应用程序处理。
+这就要涉及 InputManagerService 相关的知识了。IMS 的创建过程和 WMS 类似，都是由 SystemServer 统一启动，在创建时 IMS 会把自己的实例传给 WMS，也就是表明 WMS 是 InputEvent 的派发者，这样的设计是自然而然的，因为 WMS 记录了当前系统中所有窗口的完整状态信息，所以也只有它才能判断应该把事件投递给哪一个具体的应用程序处理。
 
 IMS 在 Native 层创建了两个线程，InputReaderThread 和 InputDispatcherThread，前者负责从驱动节点中读取 Event，后者专责与分发事件。InputReaderThread 中的实现核心是 InputReader 类，但在 InputReader 实际上并不直接去访问设备节点，而是通过 EventHub 来完成这一工作。EventHub 通过读取 /dev/input 下的相关文件来判断是否有新事件，并通知 InputReader。InputDispatcherThread 在创建之初，就把自己的实例传给了 InputReaderThread，这样便可以源源不断的获取事件进行分发了。
 
@@ -73,7 +73,7 @@ IMS 在 Native 层创建了两个线程，InputReaderThread 和 InputDispatcherT
 
 #### View 刷新机制
 
-当我们调用 View 的 invalidate 时刷新视图时，它会调到 ViewRootImp 的 invalidateChildInParent，这个方法首先会 checkThread 检查是否是主线程，然后调用其 scheduleTraversals 方法。这个方法就是视图绘制的开始，但是它并不是立即去执行 View 的三大流程，而是先往消息队列里面添加一个同步屏障，然后在往 Choreographer 里面注册一个 TRAVERSAL 的回调。在下一次 Vsync 信号到来时，会去执行 doTraversals 方法。
+当我们调用 View 的 invalidate 刷新视图时，它会调到 ViewRootImp 的 invalidateChildInParent，这个方法首先会 checkThread 检查是否是主线程，然后调用其 scheduleTraversals 方法。这个方法就是视图绘制的开始，但是它并不是立即去执行 View 的三大流程，而是先往消息队列里面添加一个同步屏障，然后在往 Choreographer 里面注册一个 TRAVERSAL 的回调。在下一次 Vsync 信号到来时，会去执行 doTraversals 方法。
 
 Choreographer 主要是用来接收 Vsync 信号，并且在信号到来时去处理一些回调事件。事件类型有四种，分别是 Input、Animation、Traversal、Commit。在 Vsync 信号到来时，会依次处理这些事件，前三种比较好理解，第四种 Commit 是用来执行组件的 onTrimMemory 函数的。Choreographer 是通过 FrameDisplayEventReceiver 来监听底层发出的 Vsync 信号的，然后在它的回调函数 onVsync 中去处理，首先会计算掉帧，然后就是 doCallbacks 处理上面所说的回调事件。
 
