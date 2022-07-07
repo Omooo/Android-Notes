@@ -365,7 +365,7 @@ public final class Looper {
                     return;
                 }
             }
-            //以 Handler(){} 内存泄露写法
+            //以 Handler(){} 写法
             handleMessage(msg);
         }
     }
@@ -375,7 +375,7 @@ public final class Looper {
     }
 ```
 
-这里，可以看到分发消息的优先级问题，Message 的 callback 优先级最高，它是一个 Runnable，处理消息时直接 run 就好了；然后就是通过 Handler.Callback 写法，它是由返回值的，如果返回 true，那么在通过 Handler(){} 重写的方法就不会执行到，这种内存泄露的写法的 handlerMessage 的优先级也是最低的。
+这里，可以看到分发消息的优先级问题，Message 的 callback 优先级最高，它是一个 Runnable，处理消息时直接 run 就好了；然后就是通过 Handler.Callback 写法，它是由返回值的，如果返回 true，那么在通过 Handler(){} 重写的方法就不会执行到，这种写法的 handlerMessage 的优先级也是最低的。
 
 #### MessageQueue 源码分析
 
@@ -468,11 +468,38 @@ MessageQueue 有两个重要方法，一个是 enqueueMessage 用于存消息，
 
 1. Handler 的 sendXxx 和 postXxx 的区别？
 
-   相信你心中已经有了答案。
+   其实这两种都会调用到 sendMessageAtTime 方法，只不过对于 postXxx 方法，它会把传入的 Runnable 参数赋值给 Message 的 callback 成员变量。当 Handler 进行分发消息时，msg.callback 会优先执行。
+
+1. 子线程中怎么使用 Handler？
+
+   子线程中使用 Handler 需要先执行两个操作：Looper.prepare 和 Looper.loop。前者会往 ThreadLocal 里面创建一个 Looper 对象，这样就避免了在 Handler 中通过 Looper.myLooper 获取 Looper 为空导致了抛异常，Looper.loop 就是开始消息循环机制了。这里一般会引申到一个问题，就是主线程中为什么不用手动调用这两个方法呢？原因是在 ActivityThread.main 方法中已经进行了调用。
 
 2. Message 的插入以及回收是如何进行的，如何实例化一个 Message 呢？
 
-   相信你心中也已经有了答案。
+   Message 往 MessageQueue 插入消息时，会根据 when 字段来判断插入的顺序，在消息执行完成之后，会进行回收消息，回收消息不过是把 Message 的成员变量都赋零值。实例化 Message 的时候，尽量使用 Message.obtain 方法，因为该方法是从缓存的消息池里面取得消息，可以避免 Message 的重复创建。
+
+4. MessageQueue 中如何等待消息？
+
+   这一步的实现是通过 MessageQueue 的 nativePollOnce 函数实现的，该方法的第二个参数就是休眠时间。在 native 侧，最终是使用了 epoll_wait 来进行等待的。
+
+   这里为啥不使用 Java 中的 wait/notify 来实现阻塞等待呢？其实在 Android 2.2 及其以前，也确实是这样做的，后面需要处理 native 侧的事件，所以只使用 Java 的 wait/notify 就不够用了。
+
+5. 线程、Handler、Looper、MessageQueue 的关系？
+
+   这里的关系是，一个线程对应一个 Looper 对应一个 MessageQueue 对应多个 Handler。
+
+6. 多个线程给 MessageQueue 发消息，如何保证线程安全？
+
+   既然一个线程对应一个 MessageQueue，那么直接加锁就可以了：
+
+   ```java
+   // MessageQueue.java
+   boolean enqueueMessage(Message msg, long when) {
+       synchronized (this) {
+           // ...
+       }
+   }
+   ```
 
 3. Looper.loop 死循环不会造成应用卡死嘛？
 
@@ -538,6 +565,54 @@ MessageQueue 有两个重要方法，一个是 enqueueMessage 用于存消息，
 7. 你知道 IdleHandler 嘛？
 
    IdleHandler 是通过 MessageQueue.addIdleHandler 来添加到 MessageQueue 的，前面提到当 MessageQueue.next 当前没有需要处理的消息时就会进入休眠，而在进入休眠之前呢，就会调用 IdleHandler 接口里的 boolean queueIdle 方法。这个方法的返回 true 则调用后保留，下次队列空闲时还会继续调用；而如果返回 false 调用完就被 remove 了。可以用到做延时加载，而且是在空闲时加载。
+   
+7. View.post 和 Handler.post 的区别？
+
+   ```java
+   // View.java
+   public boolean post(Runnable action) {
+       final AttachInfo attachInfo = mAttachInfo;
+       if (attachInfo != null) {
+           return attachInfo.mHandler.post(action);
+       }
+   
+       getRunQueue().post(action);
+       return true;
+   }
+   ```
+   
+   区别就是：
+   
+   1. 如果在 performTraversals 前调用 View.post，则会将消息进行保存，之后在 dispatchAttachedToWindow 的时候通过 ViewRootImpl 中的 ViewRootHandler 进行调用。
+   2. 如果在 performTraversals 以后调用 View.post，则直接通过 ViewRootImpl 的 Handler 进行调用。
+   
+   这里就可以回答一个问题了，为什么 View.post 里就可以拿到 View 的宽高信息了呢？因为 View.post 的 Runnable 执行的时候，已经执行过 performTraversals 了，也就是 View 的三大流程都执行过了，自然就可以获取到 View 的宽高信息了。
+   
+13. 非 UI 线程真的不能操作 View 嘛？
+
+    ```java
+    // ViewRootImpl.java
+    public ViewRootImpl(Context context, Display display) {
+        mThread = Thread.currentThread();
+    }
+    
+    public void requestLayout() {
+        if (!mHandlingLayoutInLayoutRequest) {
+            checkThread();
+            mLayoutRequested = true;
+            scheduleTraversals();
+        }
+    }
+    
+    void checkThread() {
+        if (mThread != Thread.currentThread()) {
+            throw new CalledFromWrongThreadException(
+                    "Only the original thread that created a view hierarchy can touch its views.");
+        }
+    }
+    ```
+
+    可以看到，这里的检查并不是检查的主线程，而是检查当前线程是不是 ViewRootImpl 创建的线程，因为 ViewRootImpl 是在主线程创建的，所以在非主线程操作 UI 在这里检查会失败。但是我们可以在该检查之前在非主线程里面操作 UI，比如在 Activity 的 onCreate、onResume 里面新建子线程去操作 UI，因为这时候还不会触发 requestLayout 检查是否是主线程。
 
 #### 总结
 
@@ -771,3 +846,5 @@ Android SDK 26 源码。
 [Handler 都没搞懂，拿什么去跳槽啊？](<https://juejin.im/post/5c74b64a6fb9a049be5e22fc>)
 
 [Android消息机制，你真的了解Handler吗？](https://mp.weixin.qq.com/s/JSrMjvBVBYeq6iBOWTGUng)
+
+[美团面试官带你学 Android - Handler 这些知识点你都知道吗](https://github.com/5A59/android-training/blob/master/interview/%E9%9D%A2%E8%AF%95%E5%AE%98%E5%B8%A6%E4%BD%A0%E5%AD%A6%E5%AE%89%E5%8D%93-Handler%E8%BF%99%E4%BA%9B%E7%9F%A5%E8%AF%86%E7%82%B9%E4%BD%A0%E9%83%BD%E7%9F%A5%E9%81%93%E5%90%97.md)
