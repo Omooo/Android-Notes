@@ -7,6 +7,7 @@ Kotlin Coroutine
 1. 启动协程的三种方式
 2. 挂起函数
 2. 协程的生命周期
+2. Channel
 2. 
 
 #### 启动协程
@@ -45,4 +46,10 @@ Job 是 launch 的返回值，Deferred 是 async 的返回值，而 Deferred 也
 6. 另外，协程是结构化的并发，这是它的第二大优势。通过分析 Job 的源码，我们发现，一个 Job 可以拥有多个 ChildJob；对应的，协程也可以拥有多个 “子协程”。
 7. 结构化并发的最大优势在于，我们可以实现只控制 “父协程”，从而达到控制一堆子协程的目的。parentJob.join() 不仅仅只会等待它自身执行完毕，还会等待它内部的 job1、job2、job3 执行完毕，parentJon.cancel() 同理。
 
-#### 
+#### Channel
+
+1. Channel 是一个管道，当我们想要用协程传递多个数据组成的流的话，就没办法用过挂起函数、async 来实现了，这时候 Channel 是一个不错的选择。
+2. 我们可以通过 Channel() 这个顶层函数来创建 Channel 管道。在创建 Channel 的时候，有三个重要参数：capacity 代表了容量；onButterOverflow 代表容量满了以后的应对策略；onUndeliverdElement 则是一个异常回调。在某些场景下，比如 "发送方对于数据是否被接收方十分关心" 的情况下，可以注册这个回调。
+3. Channel 有两个关键的方法：send()、receive()，前者用于发送管道数据，后者用户接收管道数据。但是，由于 Channel 是存在关闭状态的，如果我们直接使用 receive()，就会导致各种问题。因此，对于管道数据的接收方来说，我们应该尽可能的使用 for 循环、consumeEach{}。
+4. Channel 是 "热" 的，这是因为不管有没有接收方，发送方都会工作。
+5. Channel 其实是 SendChannel、ReceiveChannel 这两个接口的组合，我们也可以借助它的这个特点，实现 "对读取开放，对写入关闭" 的设计。
