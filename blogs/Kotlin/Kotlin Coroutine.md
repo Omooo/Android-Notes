@@ -8,6 +8,7 @@ Kotlin Coroutine
 2. 挂起函数
 2. 协程的生命周期
 2. Channel
+2. select
 2. 
 
 #### 启动协程
@@ -53,3 +54,10 @@ Job 是 launch 的返回值，Deferred 是 async 的返回值，而 Deferred 也
 3. Channel 有两个关键的方法：send()、receive()，前者用于发送管道数据，后者用户接收管道数据。但是，由于 Channel 是存在关闭状态的，如果我们直接使用 receive()，就会导致各种问题。因此，对于管道数据的接收方来说，我们应该尽可能的使用 for 循环、consumeEach{}。
 4. Channel 是 "热" 的，这是因为不管有没有接收方，发送方都会工作。
 5. Channel 其实是 SendChannel、ReceiveChannel 这两个接口的组合，我们也可以借助它的这个特点，实现 "对读取开放，对写入关闭" 的设计。
+
+#### select
+
+1. select 就是选择更快的结果。
+2. 当 select 与 async、Channel 搭配以后，我们可以并发执行协程任务，以此大大提升程序的执行效率甚至用户体验，并且还可以改善程序的扩展性、灵活性。
+3. 关于 select 的 API，我们完全不需要去刻意记忆，只需要在 Deferred、Channel 的 API 基础上加上 on 这个前缀即可。
+4. 最后，我们还结合实战，分析了 select 与 async 产生太多并发协程的时候，还可以定义一个类似 fastest() 的方法，去统一取消剩余的协程任务。这样的做法，就可以大大节省计算资源，从而平衡性能与功耗。
