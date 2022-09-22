@@ -8,6 +8,7 @@ Kotlin Coroutine
 2. 挂起函数
 2. 协程的生命周期
 2. Channel
+2. Flow
 2. select
 2. 协程中的并发同步
 2. 协程中的异常
@@ -56,6 +57,13 @@ Job 是 launch 的返回值，Deferred 是 async 的返回值，而 Deferred 也
 3. Channel 有两个关键的方法：send()、receive()，前者用于发送管道数据，后者用户接收管道数据。但是，由于 Channel 是存在关闭状态的，如果我们直接使用 receive()，就会导致各种问题。因此，对于管道数据的接收方来说，我们应该尽可能的使用 for 循环、consumeEach{}。
 4. Channel 是 "热" 的，这是因为不管有没有接收方，发送方都会工作。
 5. Channel 其实是 SendChannel、ReceiveChannel 这两个接口的组合，我们也可以借助它的这个特点，实现 "对读取开放，对写入关闭" 的设计。
+
+#### Flow
+
+1. Flow 就是数据流，整个 Flow 的 API 设计，可以大致分为三个部分，上游的源头、中间操作符、下游终止操作符。
+2. 对于上游源头来说，它主要负责：创建 Flow，并且产生数据。而创建 Flow，主要有三种方式：flow{}、flowOf()、asFlow()。
+3. 对于中间操作符来说，它也可以分为几大类。第一类是从集合抄过来的操作符，比如 map、filter；第二类是生命周期回调，比如 onStart、onCompletion；第三类是功能性 API，比如说 flowOn 切换 Context、catch 捕获上游的异常。
+4. 对于下游的终止操作符，也是分为三大类。首先，就是 collect 这个最基础的终止操作符；其次，就是从集合 API 抄过来的操作符。比如 fold、reduce；最后就是 Flow 转化成集合的 API，比如说 flow.toList()。
 
 #### select
 
