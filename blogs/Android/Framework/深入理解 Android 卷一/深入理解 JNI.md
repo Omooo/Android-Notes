@@ -52,7 +52,7 @@ public class MediaScanner implements AutoCloseable {
 
 如果 Java 要调用 native 函数，就必须通过一个位于 JNI 层的动态库来实现。动态库就是运行时加载的库，那么在什么时候以及什么地方加载这个库呢？
 
-原则是是，在调用 native 函数前，任何时候、任何地方加载都可以。通常的做法是在类的 static 语句中加载，调用 System.loadLibrary 方法就可以了。其函数的参数是动态库的名字，即 media_jni。系统会自动根据不同的平台扩展成真实的动态库文件名，例如在 Linux 系统上会扩展成 libmedia_jni.so，而在 Windows 平台上则会扩展成 media_jni.dll。
+原则是，在调用 native 函数前，任何时候、任何地方加载都可以。通常的做法是在类的 static 语句中加载，调用 System.loadLibrary 方法就可以了。其函数的参数是动态库的名字，即 media_jni。系统会自动根据不同的平台扩展成真实的动态库文件名，例如在 Linux 系统上会扩展成 libmedia_jni.so，而在 Windows 平台上则会扩展成 media_jni.dll。
 
 在 Java 层使用 JNI 技术真是太容易了，只需要完成两项工作即可：
 
